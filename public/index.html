@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Real-time infrastructure status for Integra — blockchain, validators, APIs, and services.">
+  <meta name="theme-color" content="#0A0A0A">
+  <title>Integra — Infrastructure Status</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>Integra Infrastructure Status</h1>
+      <div class="header-meta">
+        <span id="overall-status" class="overall-badge loading">Loading...</span>
+        <span id="last-updated" class="last-updated"></span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="summary" class="summary-bar">
+      <div class="summary-item"><span class="count" id="count-up">-</span><span class="label">Operational</span></div>
+      <div class="summary-item"><span class="count" id="count-degraded">-</span><span class="label">Degraded</span></div>
+      <div class="summary-item"><span class="count" id="count-down">-</span><span class="label">Down</span></div>
+      <div class="summary-item"><span class="count" id="count-total">-</span><span class="label">Total</span></div>
+    </div>
+
+    <div id="categories"></div>
+
+    <div id="error-banner" class="error-banner hidden">
+      <span id="error-text"></span>
+    </div>
+  </main>
+
+  <footer>
+    <p>Auto-refreshes every 30s &mdash; <span class="brand">Integra</span> Infrastructure Monitoring</p>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

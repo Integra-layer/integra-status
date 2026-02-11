@@ -1,0 +1,341 @@
+/* Integra Status Page — Official Brand Design System */
+
+/* Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Brand Gradient */
+  --gradient-brand: linear-gradient(135deg, #FFAFD6, #F34499, #FC4E23, #F71227);
+
+  /* UI Accents */
+  --accent-pink: #FF4F91;
+  --accent-yellow: #FFB84C;
+  --accent-orange: #FF4F2E;
+  --accent-purple: #A855F7;
+
+  /* Semantic */
+  --color-success: #1FC16B;
+  --color-info: #335CFF;
+  --color-warning: #FA7319;
+  --color-error: #FA3748;
+
+  /* Dark Theme Backgrounds */
+  --bg-strong: #0A0A0A;
+  --bg-base: #161616;
+  --bg-card: #171717;
+  --bg-surface: #1F1F1F;
+  --bg-soft: #262626;
+  --bg-sub: #333333;
+
+  /* Text */
+  --text-primary: #FFFFFF;
+  --text-secondary: #A0A0A0;
+  --text-muted: #666666;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Geist Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-strong);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+/* Header with gradient border */
+header {
+  background: var(--bg-base);
+  padding: 24px 0;
+  border-bottom: 2px solid transparent;
+  background-image: linear-gradient(var(--bg-base), var(--bg-base)), var(--gradient-brand);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+.header-content {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+header h1 {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.overall-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.last-updated {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
+/* Summary bar */
+.summary-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.summary-item {
+  flex: 1;
+  min-width: 100px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  text-align: center;
+  border: 1px solid var(--bg-soft);
+  transition: border-color 0.2s;
+}
+
+.summary-item:hover {
+  border-color: var(--bg-sub);
+}
+
+.summary-item .count {
+  display: block;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.summary-item .label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 500;
+}
+
+/* Category sections */
+.category {
+  margin-bottom: 24px;
+}
+
+.category h2 {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--bg-soft);
+}
+
+.endpoint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.endpoint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--bg-soft);
+  flex-wrap: wrap;
+  gap: 8px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.endpoint:hover {
+  border-color: var(--bg-sub);
+  background: var(--bg-surface);
+}
+
+.endpoint-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 200px;
+}
+
+.endpoint-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* Status dots with glow */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.status-dot.up {
+  background: var(--color-success);
+  box-shadow: 0 0 6px rgba(31, 193, 107, 0.5);
+}
+
+.status-dot.degraded {
+  background: var(--color-warning);
+  box-shadow: 0 0 6px rgba(250, 115, 25, 0.5);
+}
+
+.status-dot.down {
+  background: var(--color-error);
+  box-shadow: 0 0 6px rgba(250, 55, 72, 0.5);
+}
+
+.endpoint-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Status badges */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge.up {
+  background: rgba(31, 193, 107, 0.12);
+  color: var(--color-success);
+}
+
+.badge.degraded {
+  background: rgba(250, 115, 25, 0.12);
+  color: var(--color-warning);
+}
+
+.badge.down {
+  background: rgba(250, 55, 72, 0.12);
+  color: var(--color-error);
+}
+
+.detail {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: 'Geist Mono', 'SF Mono', 'Menlo', monospace;
+}
+
+.response-time {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 55px;
+  text-align: right;
+  font-family: 'Geist Mono', 'SF Mono', 'Menlo', monospace;
+}
+
+.error-text {
+  font-size: 12px;
+  color: var(--color-warning);
+  max-width: 300px;
+}
+
+/* Error banner */
+.error-banner {
+  background: rgba(250, 55, 72, 0.08);
+  border: 1px solid rgba(250, 55, 72, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  margin-top: 16px;
+  color: var(--color-error);
+  font-size: 14px;
+}
+
+.hidden { display: none; }
+
+/* Status colors */
+.color-up { color: var(--color-success); }
+.color-degraded { color: var(--color-warning); }
+.color-down { color: var(--color-error); }
+
+/* Overall badge variants */
+.overall-badge.all-up {
+  background: rgba(31, 193, 107, 0.12);
+  color: var(--color-success);
+}
+
+.overall-badge.has-degraded {
+  background: rgba(250, 115, 25, 0.12);
+  color: var(--color-warning);
+}
+
+.overall-badge.has-down {
+  background: rgba(250, 55, 72, 0.12);
+  color: var(--color-error);
+}
+
+.overall-badge.loading {
+  background: rgba(160, 160, 160, 0.1);
+  color: var(--text-muted);
+}
+
+/* Footer with gradient accent */
+footer {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+footer .brand {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 600;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .header-content { flex-direction: column; align-items: flex-start; }
+  .summary-bar { flex-direction: column; }
+  .summary-item { min-width: auto; }
+  .endpoint { flex-direction: column; align-items: flex-start; }
+  .endpoint-right { width: 100%; justify-content: space-between; }
+  .response-time { text-align: left; }
+}
