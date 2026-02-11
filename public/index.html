@@ -13,9 +13,15 @@
 <body>
   <header>
     <div class="header-content">
-      <h1>Integra Infrastructure Status</h1>
+      <div class="header-brand">
+        <div class="header-logo">I</div>
+        <div class="header-titles">
+          <h1>Infrastructure Status</h1>
+          <div class="subtitle">Integra Layer — Real-time Monitoring</div>
+        </div>
+      </div>
       <div class="header-meta">
-        <span id="overall-status" class="overall-badge loading">Loading...</span>
+        <span id="overall-status" class="overall-badge loading">Loading</span>
         <span id="last-updated" class="last-updated"></span>
       </div>
     </div>
@@ -37,7 +43,7 @@
   </main>
 
   <footer>
-    <p>Auto-refreshes every 30s &mdash; <span class="brand">Integra</span> Infrastructure Monitoring</p>
+    <p><span class="refresh-indicator"><span class="dot"></span> Live</span> — Auto-refreshes every 30s — <span class="brand">Integra</span></p>
   </footer>
 
   <script src="/app.js"></script>
