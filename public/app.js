@@ -719,6 +719,7 @@ function renderAppCard(group, groupEndpoints, context) {
 
   const card = el('div', {
     className: `app-card status-${worstStatus}`,
+    id: `group-${group.id}`,
     'aria-label': `${group.name} — ${countText}`,
   });
 
@@ -1225,6 +1226,71 @@ function matchesSearch(r, query) {
 }
 
 // ---------------------------------------------------------------------------
+// Section navigation sidebar
+// ---------------------------------------------------------------------------
+
+let _scrollSpyCleanup = null;
+
+function renderSectionNav(appGroups, groupEndpointsMap) {
+  const nav = el('div', { className: 'section-nav' }, [
+    el('div', { className: 'section-nav-title', textContent: 'Sections' }),
+  ]);
+
+  const items = [];
+  for (const group of appGroups) {
+    const endpoints = groupEndpointsMap[group.id];
+    if (!endpoints || endpoints.length === 0) continue;
+
+    const worstStatus = computeWorstStatus(endpoints);
+    const item = el('div', {
+      className: 'section-nav-item',
+      'data-target': `group-${group.id}`,
+    }, [
+      el('span', { className: 'section-nav-icon', textContent: group.icon }),
+      el('span', { className: 'section-nav-label', textContent: group.name }),
+      el('span', { className: `section-nav-dot ${worstStatus}` }),
+    ]);
+
+    item.addEventListener('click', () => {
+      const target = document.getElementById(`group-${group.id}`);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    nav.appendChild(item);
+    items.push({ el: item, id: `group-${group.id}` });
+  }
+
+  // Scroll spy — highlight active section
+  if (_scrollSpyCleanup) { _scrollSpyCleanup(); _scrollSpyCleanup = null; }
+
+  function onScroll() {
+    let activeId = null;
+    for (const { id } of items) {
+      const target = document.getElementById(id);
+      if (target) {
+        const rect = target.getBoundingClientRect();
+        if (rect.top <= 200) activeId = id;
+      }
+    }
+    for (const { el: itemEl, id } of items) {
+      itemEl.classList.toggle('active', id === activeId);
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  _scrollSpyCleanup = () => window.removeEventListener('scroll', onScroll);
+  requestAnimationFrame(onScroll);
+
+  return nav;
+}
+
+function removeSectionNav() {
+  if (_scrollSpyCleanup) { _scrollSpyCleanup(); _scrollSpyCleanup = null; }
+  const existing = document.querySelector('.section-nav');
+  if (existing) existing.remove();
+}
+
+// ---------------------------------------------------------------------------
 // Overview page renderer
 // ---------------------------------------------------------------------------
 
@@ -1336,15 +1402,25 @@ function renderOverview(data) {
   } else if (viewMode === 'minimal') {
     const filteredIds = new Set(filtered.map(r => r.id));
     const grid = el('div', { className: 'app-grid' });
+    const groupEndpointsMap = {};
     for (const group of (data.appGroups || [])) {
       const groupEndpoints = group.endpoints
         .map(id => resultMap[id])
         .filter(ep => ep && filteredIds.has(ep.id));
       if (groupEndpoints.length === 0) continue;
+      groupEndpointsMap[group.id] = groupEndpoints;
       grid.appendChild(renderAppCard(group, groupEndpoints, context));
     }
     page.appendChild(grid);
+
+    // Section navigation sidebar (injected into body, outside page flow)
+    removeSectionNav();
+    const visibleGroups = (data.appGroups || []).filter(g => groupEndpointsMap[g.id]);
+    if (visibleGroups.length > 1) {
+      document.body.appendChild(renderSectionNav(visibleGroups, groupEndpointsMap));
+    }
   } else {
+    removeSectionNav();
     page.appendChild(renderCategories(data, context));
   }
 
@@ -1368,6 +1444,7 @@ function renderPage() {
     clearNode(pageContent);
     let content;
     if (route.page === 'service') {
+      removeSectionNav();
       content = renderServiceDetail(route.serviceId, data);
     } else {
       content = renderOverview(data);

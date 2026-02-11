@@ -1956,6 +1956,99 @@ footer .dot {
    MOBILE RESPONSIVE
    ══════════════════════════════════════════════════════════════════════ */
 
+/* ══════════════════════════════════════════════════════════════════════
+   SECTION NAVIGATION SIDEBAR
+   ══════════════════════════════════════════════════════════════════════ */
+
+.section-nav {
+  position: fixed;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 176px;
+  background: var(--bg-card);
+  border: 1px solid var(--bg-soft);
+  border-radius: var(--radius-lg);
+  padding: 12px 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  z-index: 100;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.section-nav-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 4px 14px 8px;
+}
+
+.section-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  border-left: 2px solid transparent;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.section-nav-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.section-nav-item.active {
+  color: var(--text-primary);
+  font-weight: 600;
+  border-left-color: var(--accent-pink);
+  background: rgba(243,68,153,0.04);
+}
+
+.section-nav-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+
+.section-nav-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.section-nav-dot.up { background: var(--color-success); }
+.section-nav-dot.degraded { background: var(--color-warning); }
+.section-nav-dot.down { background: var(--color-error); }
+
+.section-nav-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Hide sidebar when viewport is too narrow for it */
+@media (max-width: 1280px) {
+  .section-nav { display: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   RESPONSIVE — TABLET / MOBILE
+   ══════════════════════════════════════════════════════════════════════ */
+
 @media (max-width: 768px) {
   .card-metrics-bar { grid-template-columns: repeat(2, 1fr); }
   .app-card-header { padding: 14px 16px 10px; }
