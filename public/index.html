@@ -11,7 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 </head>
 <body>
-  <header>
+  <a href="#categories" class="skip-link">Skip to status</a>
+  <header role="banner">
     <div class="header-content">
       <div class="header-brand">
         <div class="header-logo">
@@ -46,7 +47,7 @@
     <div id="refresh-bar-fill" class="refresh-bar-fill"></div>
   </div>
 
-  <main>
+  <main role="main" aria-label="Service status">
     <div id="summary" class="summary-bar">
       <div class="summary-item"><span class="count" id="count-up">-</span><span class="label">Operational</span></div>
       <div class="summary-item"><span class="count" id="count-degraded">-</span><span class="label">Degraded</span></div>
@@ -62,6 +63,12 @@
       <button class="env-tab" data-env="release">Release</button>
     </div>
 
+    <div class="search-bar">
+      <span class="search-icon">&#x1F50E;&#xFE0E;</span>
+      <input id="search-input" type="text" placeholder="Search endpoints, apps, owners..." autocomplete="off" aria-label="Search endpoints" role="searchbox" />
+      <span id="search-clear" class="search-clear hidden">&times;</span>
+    </div>
+
     <div id="categories"></div>
 
     <div id="error-banner" class="error-banner hidden">
@@ -70,7 +77,7 @@
   </main>
 
   <!-- Dependency slide-out panel -->
-  <div id="dep-panel" class="dep-panel">
+  <div id="dep-panel" class="dep-panel" role="dialog" aria-label="Service details" aria-hidden="true">
     <div class="dep-panel-header">
       <h3 id="dep-panel-title">Dependencies</h3>
       <button id="dep-panel-close" class="dep-panel-close">&times;</button>
@@ -79,7 +86,7 @@
   </div>
   <div id="dep-overlay" class="dep-overlay"></div>
 
-  <footer>
+  <footer role="contentinfo">
     <p><span class="refresh-indicator"><span class="dot"></span> Live</span> — Auto-refreshes every 30s — <span class="brand">Integra</span></p>
   </footer>
 

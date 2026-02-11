@@ -30,6 +30,9 @@ var collapsedCategories = {}; // { categoryKey: true/false } — persists across
 var lastRefreshTime = null;
 var countdownInterval = null;
 var previousStatusMap = {}; // { endpointId: 'UP'|'DOWN'|... } for change detection
+var currentSearchQuery = ''; // lowercase search term
+var searchDebounceTimer = null;
+var panelOpener = null; // element that opened the detail panel (for focus return)
 
 // ---------------------------------------------------------------------------
 // API
@@ -167,6 +170,13 @@ function pauseCountdown() {
 // ---------------------------------------------------------------------------
 
 function renderSummary(data) {
+  // Set aria-live on summary for screen reader announcements
+  var summaryEl = document.getElementById('summary');
+  if (summaryEl && !summaryEl.getAttribute('aria-live')) {
+    summaryEl.setAttribute('aria-live', 'polite');
+    summaryEl.setAttribute('aria-atomic', 'true');
+  }
+
   var countUp = document.getElementById('count-up');
   countUp.textContent = data.up;
   countUp.className = 'count color-up';
@@ -222,13 +232,21 @@ function renderEndpoint(r, impactMap, dependencyGraph, resultMap) {
   // Detect status change for flash animation
   var changed = previousStatusMap[r.id] && previousStatusMap[r.id] !== r.status;
 
-  // Left side: dot + name (clickable if URL exists) + env badge
-  var nameNode = r.url
-    ? el('a', { className: 'endpoint-name', href: r.url, target: '_blank', rel: 'noopener', textContent: r.name })
-    : el('span', { className: 'endpoint-name', textContent: r.name });
+  // Left side: dot + name (clickable to open detail panel) + env badge + description
+  var nameNode = el('button', { className: 'endpoint-name-btn', textContent: r.name });
+  nameNode.addEventListener('click', function(e) {
+    e.stopPropagation();
+    openDepPanel(r, dependencyGraph, resultMap);
+  });
   var leftChildren = [
-    el('span', { className: 'status-dot ' + statusClass }),
-    nameNode,
+    el('span', { className: 'status-dot ' + statusClass, title: r.status === 'UP' ? 'Operational' : r.status === 'DEGRADED' ? 'Degraded' : r.status === 'DOWN' ? 'Down' : r.status, 'aria-label': r.status === 'UP' ? 'Operational' : r.status === 'DEGRADED' ? 'Degraded' : r.status === 'DOWN' ? 'Down' : r.status }),
+    el('div', {}, (function() {
+      var inner = [nameNode];
+      if (r.description) {
+        inner.push(el('span', { className: 'endpoint-desc', textContent: r.description }));
+      }
+      return inner;
+    })()),
     el('span', { className: 'env-badge env-' + r.environment, textContent: r.environment }),
   ];
   var left = el('div', { className: 'endpoint-left' }, leftChildren);
@@ -257,18 +275,34 @@ function renderEndpoint(r, impactMap, dependencyGraph, resultMap) {
   var hasDeps = (graphNode.dependsOn && graphNode.dependsOn.length > 0) ||
                 (graphNode.requiredBy && graphNode.requiredBy.length > 0);
   var depBtnClass = 'dep-btn' + (hasDeps ? '' : ' no-deps');
-  var depBtn = el('button', { className: depBtnClass, title: 'View dependencies', textContent: '\u{1F517}' });
+  var depBtn = el('button', { className: depBtnClass, title: 'View details for ' + r.name, 'aria-label': 'View details for ' + r.name, textContent: '\u{1F517}' });
   depBtn.addEventListener('click', function(e) {
     e.stopPropagation();
     openDepPanel(r, dependencyGraph, resultMap);
   });
   rightChildren.push(depBtn);
 
-  rightChildren.push(el('span', { className: 'response-time', textContent: responseTime }));
+  // Response time with color coding
+  var rtClass = 'response-time';
+  if (r.responseTimeMs > 0 && r.responseTimeMs < 200) rtClass += ' rt-fast';
+  else if (r.responseTimeMs >= 1000) rtClass += ' rt-slow';
+  rightChildren.push(el('span', { className: rtClass, textContent: responseTime }));
 
   var right = el('div', { className: 'endpoint-right' }, rightChildren);
   var endpointClass = 'endpoint' + (changed ? ' status-changed' : '');
-  var endpointNode = el('div', { className: endpointClass, 'data-endpoint-id': r.id }, [left, right]);
+  var endpointNode = el('div', { className: endpointClass, 'data-endpoint-id': r.id, role: 'button', tabindex: '0', 'aria-label': 'View details for ' + r.name }, [left, right]);
+
+  // Make entire row clickable
+  endpointNode.addEventListener('click', function(e) {
+    if (e.target.closest('a') || e.target.closest('button')) return;
+    openDepPanel(r, dependencyGraph, resultMap);
+  });
+  endpointNode.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openDepPanel(r, dependencyGraph, resultMap);
+    }
+  });
 
   // Impact warning: if this endpoint is DOWN/DEGRADED and has impacted services
   if ((r.status === 'DOWN' || r.status === 'DEGRADED') && impactMap && impactMap[r.id]) {
@@ -556,9 +590,115 @@ function openDepPanel(r, dependencyGraph, resultMap) {
   title.textContent = r.name;
   while (body.firstChild) body.removeChild(body.firstChild);
 
-  var graphNode = dependencyGraph[r.id] || { dependsOn: [], requiredBy: [] };
+  // ── Status row: badge + response time + env ──
+  var statusClass = r.status ? r.status.toLowerCase() : 'unknown';
+  var responseTime = r.responseTimeMs > 0 ? r.responseTimeMs + 'ms' : '\u2014';
+  var statusRow = el('div', { className: 'detail-status-row' }, [
+    el('span', { className: 'badge ' + statusClass, textContent: r.status || 'UNKNOWN' }),
+    el('span', { className: 'detail-response-time', textContent: responseTime }),
+    el('span', { className: 'env-badge env-' + r.environment, textContent: r.environment }),
+  ]);
+  body.appendChild(statusRow);
 
-  // Mini SVG graph at top
+  // ── Description ──
+  if (r.description) {
+    body.appendChild(el('div', { className: 'detail-description', textContent: r.description }));
+  }
+
+  // ── Quick links: URL, Docs, Repo ──
+  var links = el('div', { className: 'detail-quick-links' });
+  // URL link
+  if (r.url) {
+    var urlBtn = el('a', { className: 'detail-link-btn', href: r.url, target: '_blank', rel: 'noopener' }, [
+      el('span', { className: 'detail-link-icon', textContent: '\u{1F517}' }),
+      el('span', { textContent: 'Open URL' }),
+    ]);
+    links.appendChild(urlBtn);
+  }
+  // Docs link
+  var docsClass = 'detail-link-btn' + (r.docsUrl ? '' : ' disabled');
+  var docsBtn = r.docsUrl
+    ? el('a', { className: docsClass, href: r.docsUrl, target: '_blank', rel: 'noopener' }, [
+        el('span', { className: 'detail-link-icon', textContent: '\uD83D\uDCD6' }),
+        el('span', { textContent: 'Docs' }),
+      ])
+    : el('span', { className: docsClass }, [
+        el('span', { className: 'detail-link-icon', textContent: '\uD83D\uDCD6' }),
+        el('span', { textContent: 'Docs' }),
+      ]);
+  links.appendChild(docsBtn);
+  // Repo link
+  var repoClass = 'detail-link-btn' + (r.repoUrl ? '' : ' disabled');
+  var repoBtn = r.repoUrl
+    ? el('a', { className: repoClass, href: r.repoUrl, target: '_blank', rel: 'noopener' }, [
+        el('span', { className: 'detail-link-icon', textContent: '\u{1F4BB}' }),
+        el('span', { textContent: 'Repo' }),
+      ])
+    : el('span', { className: repoClass }, [
+        el('span', { className: 'detail-link-icon', textContent: '\u{1F4BB}' }),
+        el('span', { textContent: 'Repo' }),
+      ]);
+  links.appendChild(repoBtn);
+  body.appendChild(links);
+
+  // ── Owner card ──
+  if (r.owner) {
+    var initials = r.owner.name.split(' ').map(function(w) { return w[0]; }).join('').toUpperCase();
+    var ownerCard = el('div', { className: 'detail-owner' }, [
+      el('div', { className: 'detail-owner-avatar', textContent: initials }),
+      el('div', { className: 'detail-owner-info' }, [
+        el('div', { className: 'detail-owner-name', textContent: r.owner.name }),
+        el('div', { className: 'detail-owner-role', textContent: r.owner.role }),
+        el('div', { className: 'detail-owner-contact', textContent: r.owner.contact }),
+      ]),
+    ]);
+    body.appendChild(ownerCard);
+  }
+
+  // ── Tech tags ──
+  if (r.tags && r.tags.length > 0) {
+    var tagsContainer = el('div', { className: 'detail-tags' });
+    for (var t = 0; t < r.tags.length; t++) {
+      tagsContainer.appendChild(el('span', { className: 'detail-tag', textContent: r.tags[t] }));
+    }
+    body.appendChild(tagsContainer);
+  }
+
+  // ── Health components (from deep-health check) ──
+  if (r.details && r.details.components) {
+    var hcSection = el('div', { className: 'dep-section' });
+    hcSection.appendChild(el('div', { className: 'dep-section-title', textContent: 'Health Components' }));
+    var compKeys = Object.keys(r.details.components);
+    for (var hc = 0; hc < compKeys.length; hc++) {
+      var compKey = compKeys[hc];
+      var comp = r.details.components[compKey];
+      var compStatus = (typeof comp === 'object') ? (comp.status || comp.state || 'unknown') : String(comp);
+      var isHealthy = /up|healthy|ok|pass/i.test(compStatus);
+      var hcDotClass = isHealthy ? 'up' : 'down';
+      var hcItem = el('div', { className: 'dep-item dep-item-border-' + hcDotClass }, [
+        el('span', { className: 'dep-item-dot ' + hcDotClass }),
+        el('span', { className: 'dep-item-name', textContent: compKey }),
+        el('span', { className: 'dep-item-status color-' + hcDotClass, textContent: compStatus }),
+      ]);
+      hcSection.appendChild(hcItem);
+    }
+    body.appendChild(hcSection);
+  }
+
+  // ── Fallback notice ──
+  if (r.details && r.details.fallback) {
+    body.appendChild(el('div', { className: 'detail-description', textContent: 'No /health endpoint found — using basic reachability check as fallback.' }));
+  }
+
+  // ── Separator before dependencies ──
+  var graphNode = dependencyGraph[r.id] || { dependsOn: [], requiredBy: [] };
+  var hasDeps = (graphNode.dependsOn && graphNode.dependsOn.length > 0) ||
+                (graphNode.requiredBy && graphNode.requiredBy.length > 0);
+  if (hasDeps) {
+    body.appendChild(el('div', { className: 'detail-separator' }));
+  }
+
+  // Mini SVG graph
   var miniGraph = renderMiniGraph(r, graphNode, resultMap);
   if (miniGraph) body.appendChild(miniGraph);
 
@@ -651,16 +791,29 @@ function openDepPanel(r, dependencyGraph, resultMap) {
 
   // If nothing to show
   if (!body.firstChild) {
-    body.appendChild(el('div', { className: 'dep-section', textContent: 'No dependencies configured for this endpoint.' }));
+    body.appendChild(el('div', { className: 'dep-section', textContent: 'No information configured for this endpoint.' }));
   }
 
   panel.classList.add('open');
   overlay.classList.add('open');
+  panel.setAttribute('aria-hidden', 'false');
+
+  // Track opener for focus return and move focus to panel title
+  panelOpener = document.activeElement;
+  title.setAttribute('tabindex', '-1');
+  title.focus();
 }
 
 function closeDepPanel() {
-  document.getElementById('dep-panel').classList.remove('open');
+  var panel = document.getElementById('dep-panel');
+  panel.classList.remove('open');
+  panel.setAttribute('aria-hidden', 'true');
   document.getElementById('dep-overlay').classList.remove('open');
+  // Return focus to the element that opened the panel
+  if (panelOpener && panelOpener.focus) {
+    panelOpener.focus();
+    panelOpener = null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -739,15 +892,20 @@ function renderMinimalView(data) {
 
     var isExpanded = !!expandedApps[group.id];
 
-    var card = el('div', { className: 'app-card status-' + worstStatus + (isExpanded ? ' expanded' : '') });
+    var card = el('div', { className: 'app-card status-' + worstStatus + (isExpanded ? ' expanded' : ''), role: 'button', tabindex: '0', 'aria-expanded': isExpanded ? 'true' : 'false', 'aria-label': group.name + ' — ' + countText });
+
+    var cardInfoChildren = [
+      el('div', { className: 'app-card-name', textContent: group.name }),
+      el('div', { className: countClass, textContent: countText }),
+    ];
+    if (group.description) {
+      cardInfoChildren.splice(1, 0, el('div', { className: 'app-card-desc', textContent: group.description }));
+    }
 
     var header = el('div', { className: 'app-card-header' }, [
       el('div', { className: 'app-card-left' }, [
         el('div', { className: 'app-card-icon', textContent: group.icon }),
-        el('div', {}, [
-          el('div', { className: 'app-card-name', textContent: group.name }),
-          el('div', { className: countClass, textContent: countText }),
-        ]),
+        el('div', {}, cardInfoChildren),
       ]),
       el('div', { className: 'app-card-status' }, [
         badge,
@@ -764,29 +922,34 @@ function renderMinimalView(data) {
     card.appendChild(header);
     card.appendChild(endpointList);
 
-    // Expand/collapse click handler
+    // Expand/collapse click + keyboard handler
     (function(cardNode, listNode, appId) {
-      cardNode.addEventListener('click', function(e) {
-        // Don't toggle if clicking a link, button, or inside the endpoint list when expanded
-        if (e.target.closest('a') || e.target.closest('button') || (e.target.closest('.app-card-endpoints') && cardNode.classList.contains('expanded'))) return;
+      function toggleCard(e) {
+        if (e.target.closest('a') || e.target.closest('button') || e.target.closest('.endpoint')) return;
 
         var nowExpanded = !expandedApps[appId];
         expandedApps[appId] = nowExpanded;
+        cardNode.setAttribute('aria-expanded', nowExpanded ? 'true' : 'false');
 
         if (nowExpanded) {
           cardNode.classList.add('expanded');
           listNode.style.maxHeight = listNode.scrollHeight + 'px';
-          // After animation completes, remove fixed maxHeight so content can reflow
           listNode.addEventListener('transitionend', function handler() {
             if (expandedApps[appId]) listNode.style.maxHeight = 'none';
             listNode.removeEventListener('transitionend', handler);
           });
         } else {
-          // Snap to current height first, then animate to 0
           listNode.style.maxHeight = listNode.scrollHeight + 'px';
           listNode.offsetHeight; // force reflow
           cardNode.classList.remove('expanded');
           listNode.style.maxHeight = '0';
+        }
+      }
+      cardNode.addEventListener('click', toggleCard);
+      cardNode.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleCard(e);
         }
       });
     })(card, endpointList, group.id);
@@ -828,7 +991,9 @@ function initViewToggle() {
 }
 
 function renderCurrentView(data) {
-  if (currentViewMode === 'minimal') {
+  if (currentSearchQuery) {
+    renderSearchView(data);
+  } else if (currentViewMode === 'minimal') {
     renderMinimalView(data);
   } else {
     renderCategories(data);
@@ -932,11 +1097,139 @@ function refresh() {
 }
 
 // ---------------------------------------------------------------------------
+// Search
+// ---------------------------------------------------------------------------
+
+function matchesSearch(r, query) {
+  if (!query) return true;
+  var hay = (r.id + ' ' + r.name + ' ' + (r.description || '') + ' ' +
+    (r.owner && r.owner.name ? r.owner.name : '') + ' ' +
+    (r.tags ? r.tags.join(' ') : '')).toLowerCase();
+  return hay.indexOf(query) !== -1;
+}
+
+function filterResults(results, query) {
+  if (!query) return results;
+  return results.filter(function(r) { return matchesSearch(r, query); });
+}
+
+function renderSearchView(data) {
+  // Filter results by search query
+  var filtered = filterResults(data.results, currentSearchQuery);
+
+  // Also apply env filter
+  if (currentEnvFilter !== 'all') {
+    filtered = filtered.filter(function(r) { return r.environment === currentEnvFilter; });
+  }
+
+  // Update summary for filtered results
+  var summaryData = {
+    total: filtered.length,
+    up: filtered.filter(function(r) { return r.status === 'UP'; }).length,
+    degraded: filtered.filter(function(r) { return r.status === 'DEGRADED'; }).length,
+    down: filtered.filter(function(r) { return r.status === 'DOWN'; }).length,
+  };
+  renderSummary(summaryData);
+
+  if (filtered.length === 0) {
+    var container = document.getElementById('categories');
+    while (container.firstChild) container.removeChild(container.firstChild);
+    container.appendChild(el('div', { className: 'search-no-results' }, [
+      el('span', { className: 'search-no-results-icon', textContent: '\uD83D\uDD0D' }),
+      el('span', { textContent: 'No endpoints match "' + currentSearchQuery + '"' }),
+    ]));
+    return;
+  }
+
+  // Create a modified data object with filtered results
+  var filteredData = {
+    results: filtered,
+    appGroups: data.appGroups,
+    impactMap: data.impactMap,
+    dependencyGraph: data.dependencyGraph,
+    timestamp: data.timestamp,
+  };
+
+  if (currentViewMode === 'minimal') {
+    renderMinimalView(filteredData);
+    // Auto-expand matching app cards
+    if (currentSearchQuery) {
+      var cards = document.querySelectorAll('.app-card');
+      for (var i = 0; i < cards.length; i++) {
+        if (!cards[i].classList.contains('expanded')) {
+          cards[i].click();
+        }
+      }
+    }
+  } else {
+    renderCategories(filteredData);
+  }
+}
+
+function initSearch() {
+  var input = document.getElementById('search-input');
+  var clearBtn = document.getElementById('search-clear');
+  if (!input || !clearBtn) return;
+
+  input.addEventListener('input', function() {
+    var val = input.value.trim().toLowerCase();
+    clearBtn.classList.toggle('hidden', val.length === 0);
+
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(function() {
+      currentSearchQuery = val;
+      if (lastData) renderSearchView(lastData);
+    }, 200);
+  });
+
+  clearBtn.addEventListener('click', function() {
+    input.value = '';
+    clearBtn.classList.add('hidden');
+    currentSearchQuery = '';
+    if (lastData) {
+      // Re-render full view with proper summary
+      var filtered = lastData.results;
+      if (currentEnvFilter !== 'all') {
+        filtered = lastData.results.filter(function(r) { return r.environment === currentEnvFilter; });
+      }
+      var summaryData = {
+        total: filtered.length,
+        up: filtered.filter(function(r) { return r.status === 'UP'; }).length,
+        degraded: filtered.filter(function(r) { return r.status === 'DEGRADED'; }).length,
+        down: filtered.filter(function(r) { return r.status === 'DOWN'; }).length,
+      };
+      renderSummary(summaryData);
+      renderCurrentView(lastData);
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Loading skeleton
+// ---------------------------------------------------------------------------
+
+function renderSkeleton() {
+  var container = document.getElementById('categories');
+  while (container.firstChild) container.removeChild(container.firstChild);
+  var grid = el('div', { className: 'app-grid' });
+  for (var i = 0; i < 6; i++) {
+    grid.appendChild(el('div', { className: 'app-card skeleton-card' }, [
+      el('div', { className: 'skeleton skeleton-header' }),
+      el('div', { className: 'skeleton skeleton-line' }),
+      el('div', { className: 'skeleton skeleton-line short' }),
+    ]));
+  }
+  container.appendChild(grid);
+}
+
+// ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
 
 initEnvTabs();
 initViewToggle();
+initSearch();
+renderSkeleton(); // show skeleton before first data load
 
 // Close panel handlers
 document.getElementById('dep-panel-close').addEventListener('click', closeDepPanel);
