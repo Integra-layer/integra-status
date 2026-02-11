@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 </head>
 <body>
-  <a href="#categories" class="skip-link">Skip to status</a>
+  <a href="#page-content" class="skip-link">Skip to status</a>
   <header role="banner">
     <div class="header-content">
       <div class="header-brand">
@@ -47,44 +47,15 @@
     <div id="refresh-bar-fill" class="refresh-bar-fill"></div>
   </div>
 
+  <div id="status-banner" class="status-banner" role="status" aria-live="polite"></div>
+
   <main role="main" aria-label="Service status">
-    <div id="summary" class="summary-bar">
-      <div class="summary-item"><span class="count" id="count-up">-</span><span class="label">Operational</span></div>
-      <div class="summary-item"><span class="count" id="count-degraded">-</span><span class="label">Degraded</span></div>
-      <div class="summary-item"><span class="count" id="count-down">-</span><span class="label">Down</span></div>
-      <div class="summary-item"><span class="count" id="count-total">-</span><span class="label">Total</span></div>
-    </div>
-
-    <div id="env-tabs" class="env-tabs">
-      <button class="env-tab active" data-env="all">All</button>
-      <button class="env-tab" data-env="prod">Production</button>
-      <button class="env-tab" data-env="dev">Development</button>
-      <button class="env-tab" data-env="staging">Staging</button>
-      <button class="env-tab" data-env="release">Release</button>
-    </div>
-
-    <div class="search-bar">
-      <span class="search-icon">&#x1F50E;&#xFE0E;</span>
-      <input id="search-input" type="text" placeholder="Search endpoints, apps, owners..." autocomplete="off" aria-label="Search endpoints" role="searchbox" />
-      <span id="search-clear" class="search-clear hidden">&times;</span>
-    </div>
-
-    <div id="categories"></div>
-
-    <div id="error-banner" class="error-banner hidden">
-      <span id="error-text"></span>
+    <div id="page-content" class="page-content">
+      <!-- Router swaps content here: overview or service detail -->
     </div>
   </main>
 
-  <!-- Dependency slide-out panel -->
-  <div id="dep-panel" class="dep-panel" role="dialog" aria-label="Service details" aria-hidden="true">
-    <div class="dep-panel-header">
-      <h3 id="dep-panel-title">Dependencies</h3>
-      <button id="dep-panel-close" class="dep-panel-close">&times;</button>
-    </div>
-    <div id="dep-panel-body" class="dep-panel-body"></div>
-  </div>
-  <div id="dep-overlay" class="dep-overlay"></div>
+  <div id="toasts" class="toasts" aria-live="assertive" aria-relevant="additions"></div>
 
   <footer role="contentinfo">
     <p><span class="refresh-indicator"><span class="dot"></span> Live</span> — Auto-refreshes every 30s — <span class="brand">Integra</span></p>

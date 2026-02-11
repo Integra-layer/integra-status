@@ -1,6 +1,7 @@
 // api/health.js — Vercel serverless function: GET /api/health
 const { checkAll } = require('../lib/health.js');
 const config = require('../lib/health-config.js');
+const history = require('../lib/history.js');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -33,6 +34,19 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // Record snapshot and compute history metrics
+    var hist = history.loadHistory();
+    hist = history.recordSnapshot(hist, results);
+    history.saveHistory(hist);
+
+    var sparklines = history.getSparklines(hist);
+    var uptimes = history.getUptimes(hist);
+    var incidents = history.getIncidents(hist);
+    var dataPoints = hist.snapshots.length;
+    var spanMinutes = dataPoints > 1
+      ? Math.round((hist.snapshots[dataPoints - 1].t - hist.snapshots[0].t) / 60000)
+      : 0;
+
     var summary = {
       timestamp: new Date().toISOString(),
       total: results.length,
@@ -44,6 +58,7 @@ module.exports = async function handler(req, res) {
       dependencyGraph: config.getDependencyGraph(),
       impactMap: impactMap,
       results: results,
+      history: { sparklines: sparklines, uptimes: uptimes, incidents: incidents, dataPoints: dataPoints, spanMinutes: spanMinutes },
     };
     res.status(200).json(summary);
   } catch (err) {
