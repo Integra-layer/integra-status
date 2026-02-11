@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Real-time infrastructure status for Integra — blockchain, validators, APIs, and services.">
-  <meta name="theme-color" content="#0A0A0A">
+  <meta name="theme-color" content="#FFFFFF">
   <title>Integra — Infrastructure Status</title>
   <link rel="stylesheet" href="/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,18 +14,37 @@
   <header>
     <div class="header-content">
       <div class="header-brand">
-        <div class="header-logo">I</div>
+        <div class="header-logo">
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="logo-grad" cx="0.5" cy="0.5" r="0.5">
+                <stop offset="0%" stop-color="#FFAFD6"/>
+                <stop offset="50%" stop-color="#F34499"/>
+                <stop offset="100%" stop-color="#FC4E23"/>
+              </radialGradient>
+            </defs>
+            <path d="M3.3916 40.8516C23.0605 40.8516 39.0058 56.8545 39.0059 76.5957V79C39.0059 79.5523 38.5581 80 38.0059 80H33.2217C32.6694 80 32.2217 79.5523 32.2217 79V76.5957C32.2216 60.6147 19.314 47.6592 3.3916 47.6592H1C0.447715 47.6592 0 47.2115 0 46.6592V41.8516C0 41.2993 0.447715 40.8516 1 40.8516H3.3916ZM80 46.6592C80 47.2115 79.5523 47.6592 79 47.6592H54.9822C54.0922 47.6592 53.6456 48.7345 54.2738 49.365L65.1601 60.2913C65.5489 60.6815 65.5489 61.3126 65.1602 61.7029L61.7758 65.1004C61.385 65.4927 60.7498 65.4927 60.3589 65.1004L49.4867 54.1883C48.8573 53.5566 47.7783 54.0023 47.7783 54.8941V79C47.7783 79.5523 47.3306 80 46.7783 80H41.9941C41.4419 80 40.9941 79.5523 40.9941 79V41.8516C40.9941 41.2993 41.4419 40.8516 41.9941 40.8516H79C79.5523 40.8516 80 41.2993 80 41.8516V46.6592ZM39.0059 38.1494C39.0059 38.7017 38.5581 39.1494 38.0059 39.1494H0.999999C0.447714 39.1494 0 38.7017 0 38.1494V33.3408C0 32.7885 0.447715 32.3408 1 32.3408H25.0178C25.9078 32.3408 26.3544 31.2655 25.7262 30.635L14.8399 19.7087C14.4511 19.3185 14.4512 18.6873 14.84 18.2971L18.2242 14.9004C18.615 14.5082 19.2502 14.5082 19.641 14.9004L30.5133 25.8118C31.1427 26.4436 32.2217 25.9978 32.2217 25.106V1C32.2217 0.447715 32.6694 0 33.2217 0H38.0059C38.5581 0 39.0059 0.447715 39.0059 1V38.1494ZM47.7783 3.4043C47.7783 19.3853 60.6859 32.3408 76.6084 32.3408H79C79.5523 32.3408 80 32.7885 80 33.3408V38.1494C80 38.7017 79.5523 39.1494 79 39.1494H76.6084C56.9395 39.1494 40.9941 23.1455 40.9941 3.4043V1C40.9941 0.447715 41.4419 0 41.9941 0H46.7783C47.3306 0 47.7783 0.447715 47.7783 1V3.4043Z" fill="url(#logo-grad)"/>
+          </svg>
+        </div>
         <div class="header-titles">
           <h1>Infrastructure Status</h1>
           <div class="subtitle">Integra Layer — Real-time Monitoring</div>
         </div>
       </div>
+      <div class="view-toggle">
+        <button class="view-btn active" data-view="minimal">Minimal</button>
+        <button class="view-btn" data-view="advanced">Advanced</button>
+      </div>
       <div class="header-meta">
         <span id="overall-status" class="overall-badge loading">Loading</span>
-        <span id="last-updated" class="last-updated"></span>
+        <span id="last-updated" class="last-updated">Updated just now</span>
       </div>
     </div>
   </header>
+
+  <div id="refresh-bar" class="refresh-bar">
+    <div id="refresh-bar-fill" class="refresh-bar-fill"></div>
+  </div>
 
   <main>
     <div id="summary" class="summary-bar">
@@ -35,12 +54,30 @@
       <div class="summary-item"><span class="count" id="count-total">-</span><span class="label">Total</span></div>
     </div>
 
+    <div id="env-tabs" class="env-tabs">
+      <button class="env-tab active" data-env="all">All</button>
+      <button class="env-tab" data-env="prod">Production</button>
+      <button class="env-tab" data-env="dev">Development</button>
+      <button class="env-tab" data-env="staging">Staging</button>
+      <button class="env-tab" data-env="release">Release</button>
+    </div>
+
     <div id="categories"></div>
 
     <div id="error-banner" class="error-banner hidden">
       <span id="error-text"></span>
     </div>
   </main>
+
+  <!-- Dependency slide-out panel -->
+  <div id="dep-panel" class="dep-panel">
+    <div class="dep-panel-header">
+      <h3 id="dep-panel-title">Dependencies</h3>
+      <button id="dep-panel-close" class="dep-panel-close">&times;</button>
+    </div>
+    <div id="dep-panel-body" class="dep-panel-body"></div>
+  </div>
+  <div id="dep-overlay" class="dep-overlay"></div>
 
   <footer>
     <p><span class="refresh-indicator"><span class="dot"></span> Live</span> — Auto-refreshes every 30s — <span class="brand">Integra</span></p>

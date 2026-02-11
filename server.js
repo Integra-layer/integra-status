@@ -13,7 +13,7 @@ const MIME = { '.html': 'text/html', '.css': 'text/css', '.js': 'application/jav
 const healthHandler = require('./api/health.js');
 
 const server = http.createServer((req, res) => {
-  if (req.url === '/api/health') {
+  if (req.url.startsWith('/api/health')) {
     // Wrap res to add json() helper like Vercel
     res.status = (code) => { res.statusCode = code; return res; };
     res.json = (data) => {
