@@ -17,6 +17,7 @@ import {
 import { DashboardClient } from "@/components/dashboard-client";
 import type { HealthSummary } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 30;
 
 export default async function DashboardPage() {
