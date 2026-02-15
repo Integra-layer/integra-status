@@ -1,0 +1,134 @@
+/*
+ * Integra Brand — Drop-in globals.css
+ * Tailwind CSS v4 (@theme directive)
+ */
+
+@import "tailwindcss";
+
+/* ─── Theme Tokens ─── */
+@theme {
+  /* Fonts */
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Brand */
+  --color-brand: #FF6D49;
+  --color-brand-dark: #FC4E23;
+  --color-brand-light: #FF8A65;
+  --color-brand-gold: #FFC17A;
+  --color-brand-pink: #F34499;
+  --color-brand-pink-light: #FFAFD6;
+  --color-brand-red: #F71227;
+  --color-brand-teal: #00A186;
+
+  /* Status */
+  --color-success: #1FC16B;
+  --color-warning: #FA7319;
+  --color-danger: #FA3748;
+  --color-info: #335CFF;
+
+  /* Light surfaces */
+  --color-surface: #FAFAF8;
+  --color-surface-card: #FFFFFF;
+  --color-surface-muted: #F5F5F2;
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-strong: rgba(0, 0, 0, 0.15);
+  --color-text: #1A1A1F;
+  --color-text-muted: #6B6B76;
+  --color-text-subtle: #9CA3AF;
+
+  /* Dark surfaces */
+  --color-surface-dark: #0A0A0F;
+  --color-surface-dark-card: rgba(23, 23, 28, 0.7);
+  --color-surface-dark-elevated: rgba(31, 31, 38, 0.6);
+  --color-surface-dark-muted: rgba(31, 31, 38, 0.4);
+  --color-border-dark: rgba(255, 255, 255, 0.08);
+  --color-border-dark-strong: rgba(255, 255, 255, 0.15);
+  --color-text-light: #E6E6E6;
+  --color-text-light-muted: #A3A3A3;
+  --color-text-light-subtle: #6C757D;
+
+  /* Neutrals */
+  --color-gray-50: #FAFAF8;
+  --color-gray-100: #F5F5F2;
+  --color-gray-200: #E5E7EB;
+  --color-gray-300: #D1D5DB;
+  --color-gray-400: #9CA3AF;
+  --color-gray-500: #6B7280;
+  --color-gray-600: #4B5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1F2937;
+  --color-gray-900: #111827;
+
+  /* Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* ─── Base Styles ─── */
+body {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: var(--color-brand);
+  color: white;
+}
+
+/* ─── Utility Classes ─── */
+
+/* Brand gradient background */
+.gradient-brand {
+  background: linear-gradient(135deg, #FFAFD6, #F34499, #FC4E23, #F71227);
+}
+
+/* Brand gradient text */
+.gradient-brand-text {
+  background: linear-gradient(135deg, #F34499, #FF7B6B, #FF4F2E);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Brand gradient button */
+.gradient-brand-btn {
+  background: linear-gradient(135deg, #F34499, #FF4F2E);
+  color: white;
+  border: none;
+}
+
+/* Glassmorphism surface */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Live status dot */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--color-success);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.5); }
+}
