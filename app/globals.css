@@ -289,19 +289,85 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Reduced motion */
+/* ─── State Change Animations ─── */
+
+/* Skeleton loading shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* State change flash for DOWN cards */
+@keyframes glow-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(250, 55, 72, 0); }
+  50% { box-shadow: 0 0 12px 4px rgba(250, 55, 72, 0.3); }
+}
+
+/* Recovery sweep for DOWN→UP */
+@keyframes shimmer-green {
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Active filter chip border rotation */
+@keyframes gradient-rotate {
+  0% { --gradient-angle: 0deg; }
+  100% { --gradient-angle: 360deg; }
+}
+
+/* CSS @property for animated number counters */
+@property --num {
+  syntax: "<integer>";
+  initial-value: 0;
+  inherits: false;
+}
+
+/* ─── Animation Utility Classes ─── */
+
+/* State change flash */
+.status-flash-down {
+  animation: glow-red 1.5s ease-in-out;
+}
+
+/* Recovery shimmer */
+.status-flash-recovery {
+  background: linear-gradient(90deg, transparent 0%, rgba(31, 193, 107, 0.15) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer-green 1s ease-out;
+}
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(90deg, var(--color-gray-100) 25%, var(--color-gray-200) 50%, var(--color-gray-100) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Scroll progress bar */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-brand-pink-light), var(--color-brand-pink), var(--color-brand), var(--color-brand-red));
+  z-index: 9999;
+  transition: width 100ms linear;
+}
+
+/* Card hover lift */
+.card-hover {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* ─── Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
-  .gradient-border-animated,
-  .status-dot,
-  [style*="animation"] {
-    animation: none !important;
-  }
-  .sparkline-path {
-    stroke-dashoffset: 0 !important;
-    animation: none !important;
-  }
-  [style*="fade-slide-up"] {
-    opacity: 1 !important;
-    transform: none !important;
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
