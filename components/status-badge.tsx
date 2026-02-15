@@ -16,19 +16,19 @@ const STATUS_CONFIG: Record<
 > = {
   UP: {
     label: "Operational",
-    bg: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
+    bg: "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-300",
     dotColor: "bg-emerald-500",
     animation: "pulse-green 2s ease-in-out infinite",
   },
   DEGRADED: {
     label: "Degraded",
-    bg: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+    bg: "bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300",
     dotColor: "bg-amber-500",
     animation: "pulse-amber 1.5s ease-in-out infinite",
   },
   DOWN: {
     label: "Down",
-    bg: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+    bg: "bg-red-100 text-red-900 dark:bg-red-900/30 dark:text-red-300",
     dotColor: "bg-red-500",
     animation: "pulse-red 1s ease-in-out infinite",
   },

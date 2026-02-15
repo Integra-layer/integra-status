@@ -99,8 +99,9 @@ export function IncidentTimeline({ incidents }: IncidentTimelineProps) {
       {/* Show more button */}
       {hasMore && (
         <button
+          type="button"
           onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-          className="mt-4 ml-6 text-sm text-brand hover:text-brand/80 transition-colors font-medium"
+          className="mt-4 ml-6 text-sm text-brand hover:text-brand/80 transition-colors font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-none rounded"
         >
           Show more ({sorted.length - visibleCount} remaining)
         </button>

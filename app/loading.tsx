@@ -1,6 +1,6 @@
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-surface" role="status" aria-label="Loading infrastructure status">
       {/* Header skeleton */}
       <div className="border-b border-neutral-200 px-6 py-4">
         <div className="flex items-center gap-3">

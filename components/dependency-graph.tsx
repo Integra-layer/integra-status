@@ -212,7 +212,7 @@ export function DependencyGraph({
 
           return (
             <g key={node.id}>
-              <a href={`/service/${node.id}`}>
+              <a href={`/service/${node.id}`} aria-label={`${node.name} — ${node.status}`}>
                 <rect
                   x={node.x}
                   y={node.y}

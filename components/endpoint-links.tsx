@@ -45,10 +45,10 @@ export function EndpointLinks({ links }: EndpointLinksProps) {
           href={item.href}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center rounded-md p-1.5 text-text-muted transition-all duration-200 hover:bg-gray-100 hover:text-text dark:hover:bg-gray-800 dark:hover:text-text-light opacity-70 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0"
+          className="inline-flex items-center justify-center rounded-md p-2 text-text-muted transition-all duration-200 hover:bg-gray-100 hover:text-text dark:hover:bg-gray-800 dark:hover:text-text-light opacity-70 group-hover:opacity-100 group-focus-within:opacity-100 translate-x-2 group-hover:translate-x-0 group-focus-within:translate-x-0 focus-visible:opacity-100 focus-visible:translate-x-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-none"
         >
           {item.icon}
-          <span className="sr-only">{item.label}</span>
+          <span className="sr-only">{item.label} (opens in new tab)</span>
         </a>
       ))}
     </div>

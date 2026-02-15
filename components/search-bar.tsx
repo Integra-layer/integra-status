@@ -135,7 +135,7 @@ export function SearchBar({
                 type="button"
                 onClick={() => onCategoryToggle(category)}
                 aria-pressed={isActive}
-                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors duration-200 cursor-pointer ${
+                className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-200 cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-none ${
                   isActive
                     ? "bg-brand/10 text-brand border-brand hover:bg-brand/20"
                     : "bg-neutral-100 text-neutral-600 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700"

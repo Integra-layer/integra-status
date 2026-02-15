@@ -23,14 +23,14 @@ export function IntegraLogo({ className, variant = 'full', color = 'current' }: 
 
   if (variant === 'mark') {
     return (
-      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} role="img" aria-label="Integra logo">
         <path d={MARK_PATH} fill={fill} />
       </svg>
     )
   }
 
   return (
-    <svg viewBox="0 0 140 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <svg viewBox="0 0 140 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} role="img" aria-label="Integra">
       <path d={MARK_PATH} fill={fill} />
       <path d={WORDMARK_PATH} fill={fill} />
     </svg>

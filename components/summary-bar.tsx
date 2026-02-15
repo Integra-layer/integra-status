@@ -47,18 +47,18 @@ function getOverallStatus(
   if (down > 0) {
     return {
       text: "Service Disruption",
-      className: "text-red-700 dark:text-red-400",
+      className: "text-red-900 dark:text-red-400",
     };
   }
   if (degraded > 0) {
     return {
       text: "Partial Degradation",
-      className: "text-amber-700 dark:text-amber-400",
+      className: "text-amber-900 dark:text-amber-400",
     };
   }
   return {
     text: "All Systems Operational",
-    className: "text-emerald-700 dark:text-emerald-400",
+    className: "text-emerald-900 dark:text-emerald-400",
   };
 }
 
@@ -75,7 +75,7 @@ export function SummaryBar({ up, degraded, down }: SummaryBarProps) {
         {/* Status pills */}
         <div className="flex items-center gap-2">
           {/* Green: always visible */}
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-sm font-medium text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-300">
             <span
               className="inline-block h-2 w-2 rounded-full bg-emerald-500"
               style={{ animation: "pulse-green 2s ease-in-out infinite" }}
@@ -86,7 +86,7 @@ export function SummaryBar({ up, degraded, down }: SummaryBarProps) {
 
           {/* Amber: only if degraded > 0 */}
           {degraded > 0 && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-sm font-medium text-amber-900 dark:bg-amber-900/30 dark:text-amber-300">
               <span
                 className="inline-block h-2 w-2 rounded-full bg-amber-500"
                 style={{ animation: "pulse-amber 1.5s ease-in-out infinite" }}
@@ -98,7 +98,7 @@ export function SummaryBar({ up, degraded, down }: SummaryBarProps) {
 
           {/* Red: only if down > 0 */}
           {down > 0 && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-800 dark:bg-red-900/30 dark:text-red-300">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-sm font-medium text-red-900 dark:bg-red-900/30 dark:text-red-300">
               <span
                 className="inline-block h-2 w-2 rounded-full bg-red-500"
                 style={{ animation: "pulse-red 1s ease-in-out infinite" }}

@@ -47,9 +47,11 @@ export function CategorySection({
       {/* Clickable header */}
       <button
         type="button"
+        id={`category-${name.toLowerCase()}-btn`}
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-muted/50 rounded-r-lg cursor-pointer"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-muted/50 rounded-r-lg cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-none"
         aria-expanded={isOpen}
+        aria-controls={`category-${name.toLowerCase()}-content`}
       >
         <div className="flex items-center gap-2.5">
           <span className="flex-shrink-0 text-muted-foreground" aria-hidden="true">
@@ -73,6 +75,9 @@ export function CategorySection({
 
       {/* Collapsible content area */}
       <div
+        id={`category-${name.toLowerCase()}-content`}
+        role="region"
+        aria-labelledby={`category-${name.toLowerCase()}-btn`}
         className="grid transition-[grid-template-rows] duration-300 ease-in-out"
         style={{
           gridTemplateRows: isOpen ? "1fr" : "0fr",

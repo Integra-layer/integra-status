@@ -109,7 +109,7 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
       <Header lastChecked={data.timestamp} endpointCount={data.total} />
       <SummaryBar up={data.up} degraded={data.degraded} down={data.down} />
 
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <main id="main" className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <div className="mb-6">
           <SearchBar
             endpointCount={data.total}

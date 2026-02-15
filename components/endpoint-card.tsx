@@ -97,8 +97,8 @@ export function EndpointCard({
           </div>
         )}
 
-        {/* Endpoint links — visible on hover */}
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        {/* Endpoint links — visible on hover and focus-within */}
+        <div className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200">
           <EndpointLinks links={result.links} />
         </div>
 
