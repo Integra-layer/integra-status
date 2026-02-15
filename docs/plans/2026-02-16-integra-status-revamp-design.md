@@ -151,12 +151,163 @@ integra-status/
 
 ## Telegram Bot (@IntegraWatchBot)
 
-### How It Works
+### Architecture
 
-1. Vercel Cron calls `/api/cron` every 60 seconds
-2. Handler fetches `/api/health`, gets all 76 endpoint statuses
-3. Compares against previous state in Vercel KV
-4. Sends Telegram messages only on state transitions
+Two entry points:
+1. **Vercel Cron** (`/api/cron`) — runs every 60s, detects transitions, pushes alerts to channel
+2. **Webhook** (`/api/telegram/webhook`) — receives user commands and button callbacks
+
+### Bot Commands
+
+| Command | Description | Response |
+|---------|-------------|----------|
+| `/status` | Full status overview | Summary card with inline keyboard buttons per category |
+| `/check <name>` | Check specific endpoint | Detailed card with sparkline ASCII, response time, links |
+| `/category <name>` | List endpoints in category | Category card with status dots per endpoint + buttons |
+| `/down` | List all DOWN endpoints | List with causes and fix suggestions |
+| `/degraded` | List all DEGRADED endpoints | List with warnings and details |
+| `/subscribe` | Subscribe to alerts (DM) | Confirms subscription, stores chat ID in KV |
+| `/unsubscribe` | Unsubscribe from alerts | Confirms removal |
+| `/help` | Command list + bot info | Formatted help card with all commands |
+| `/ping` | Bot health check | "Pong! Latency: Xms" |
+
+### Inline Keyboards
+
+**Status overview buttons:**
+```
+[ 🟢 Blockchain (8/8) ] [ ⚡ Validators (4/4) ]
+[ 🔧 Backend (10/12)  ] [ 🌐 Frontend (15/17) ]
+[ 🔗 External (11/11) ] [ 🔄 Refresh          ]
+```
+
+**Category drill-down buttons:**
+```
+[ Mainnet EVM RPC 🟢     ] [ Mainnet Cosmos RPC 🟢  ]
+[ Testnet EVM RPC 🟡     ] [ Explorer GraphQL 🟢    ]
+[ ◀ Back to Overview     ] [ 🔄 Refresh             ]
+```
+
+**Endpoint detail buttons:**
+```
+[ 🔗 Open Endpoint ] [ 📄 Docs ] [ 💻 Repo ]
+[ ◀ Back to Category ] [ 🔄 Re-check ]
+```
+
+### Message Design (HTML parse mode)
+
+**Status Overview:**
+```
+⬡ <b>Integra Infrastructure Status</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+🟢 <b>42</b> Operational
+🟡 <b>2</b> Degraded
+🔴 <b>1</b> Down
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏱ Updated: 02:15 UTC
+📊 Uptime (1h): 98.7%
+
+Select a category below for details.
+```
+
+**Alert Message:**
+```
+🔴 <b>DOWN: Mainnet EVM RPC</b>
+
+⏱ Detected: 2026-02-16 02:15:00 UTC
+📍 <code>https://adamboudj.integralayer.com/rpc</code>
+📂 Category: Blockchain
+⏳ Response: timeout
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 <b>Possible causes:</b>
+  • intgd service stopped or crashed
+  • Disk full on validator EC2
+  • Node fell behind sync
+
+⚠️ <b>Impact:</b> Explorer v2 loses EVM data
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔗 <a href="https://status.integralayer.com">Status Page</a>
+```
+
+**Recovery Message:**
+```
+🟢 <b>RECOVERED: Mainnet EVM RPC</b>
+
+⏱ Recovered: 2026-02-16 02:19:32 UTC
+⏳ Downtime: <b>4m 32s</b>
+📈 Response: 142ms
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+All systems operational ✓
+```
+
+**Daily Digest (08:00 UTC):**
+```
+📊 <b>Daily Infrastructure Report</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🟢 <b>42/45</b> endpoints operational
+
+<b>24h Summary:</b>
+  ✅ Uptime: 99.2%
+  🔴 Incidents: 3
+  ⏱ Avg response: 234ms
+  🔁 Longest outage: 4m 32s (EVM RPC)
+
+<b>Currently degraded (>1h):</b>
+  🟡 Testnet EVM RPC — syncing
+  🟡 Dashboard API (Dev) — slow responses
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 Full report: status.integralayer.com
+```
+
+**Endpoint Detail:**
+```
+🔍 <b>Mainnet EVM RPC</b>
+
+<i>JSON-RPC gateway for EVM smart contracts
+and transactions on Integra mainnet</i>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+Status: 🟢 <b>UP</b>
+Response: <code>142ms</code>
+Block: <code>#312,847</code>
+Chain ID: <code>0x6669</code>
+Peers: <code>12</code>
+Uptime (1h): <code>100%</code>
+
+📊 Last 20 checks:
+<code>▁▂▃▂▁▂▃▄▃▂▁▂▃▂▁▂▃▂▁▂</code>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 Owner: Adam Boudj (infra)
+🏷 Tags: EVM, Cosmos SDK
+🌐 Env: mainnet (prod)
+```
+
+### Callback Query Handling
+
+Bot processes inline keyboard button presses via callback queries:
+- `cat:{category}` — show category detail
+- `ep:{endpoint_id}` — show endpoint detail
+- `refresh` — re-fetch and update the message in-place (edit message)
+- `back:overview` — go back to status overview
+- `back:cat:{category}` — go back to category
+- `recheck:{endpoint_id}` — run a single endpoint check and update
+- `subscribe` / `unsubscribe` — toggle alert subscription
+
+Messages are edited in-place (not new messages) for clean UX — `editMessageText` + `editMessageReplyMarkup`.
+
+### ASCII Sparklines
+
+Since Telegram doesn't render SVG, use Unicode block characters for sparklines:
+```
+▁▂▃▄▅▆▇█  (U+2581-U+2588)
+```
+Map response times to 8 levels. DOWN values shown as `▁` (floor) in red context.
 
 ### Alert Types
 
@@ -168,41 +319,28 @@ integra-status/
 | DEGRADED → UP | `🟢` | `🟢 RECOVERED: Explorer GraphQL` |
 | DOWN → DEGRADED | `🟠` | `🟠 IMPROVING: Mainnet EVM RPC (still degraded)` |
 
-### Message Format
-
-```
-🔴 DOWN: Mainnet EVM RPC
-
-⏱ Detected: 2026-02-16 02:15:00 UTC
-📍 Endpoint: https://adamboudj.integralayer.com/rpc
-📂 Category: Blockchain
-
-💡 Possible causes:
-  • intgd service stopped or crashed
-  • Disk full on validator EC2
-  • Node fell behind sync
-
-🔗 Status page: https://status.integralayer.com
-```
-
 ### Anti-Fatigue Rules
 
 - **Flap protection:** 3+ oscillations in 5 min → consolidate into one "flapping" alert, suppress until stable 2 min
 - **Grouped alerts:** multiple downs in same 60s check → ONE message listing all
 - **Recovery delay:** 2 consecutive UP checks before sending recovery
-- **Daily digest:** 08:00 UTC summary ("All operational" or "2 degraded >1h")
+- **Daily digest:** 08:00 UTC summary with 24h stats
+- **Edit-in-place:** Refresh button edits existing message instead of sending new ones
 
 ### State Storage (Vercel KV)
 
 - `status:{endpoint_id}` → last known status + timestamp
 - `flap:{endpoint_id}` → transition count in rolling 5min window
 - `digest:last` → timestamp of last daily digest
+- `subscribers` → set of chat IDs for DM alerts
+- `webhook:secret` → webhook verification secret
 
 ### Configuration
 
 - `TELEGRAM_BOT_TOKEN` env var
 - `TELEGRAM_CHANNEL_ID` env var
-- `vercel.json`: `{ "crons": [{ "path": "/api/cron", "schedule": "* * * * *" }] }`
+- `TELEGRAM_WEBHOOK_SECRET` env var
+- `vercel.json`: cron + webhook route
 
 ## Data Model
 

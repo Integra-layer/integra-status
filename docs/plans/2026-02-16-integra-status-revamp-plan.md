@@ -704,23 +704,49 @@ git commit -m "feat: add keyframe animations, gradients, and reduced-motion supp
 
 ---
 
-### Task 11: Implement Telegram bot
+### Task 11: Implement Telegram bot — core module + cron alerts
 
 **Files:**
 - Create: `lib/telegram.ts`
+- Create: `lib/telegram-messages.ts`
+- Create: `lib/telegram-keyboards.ts`
 - Create: `app/api/cron/route.ts`
 - Modify: `vercel.json` (add cron schedule)
 
-**Step 1: Create Telegram module**
+**Step 1: Create Telegram API module**
 
 `lib/telegram.ts`:
-- `sendMessage(chatId, text, parseMode)` — POST to Telegram Bot API
-- `formatAlert(transition, endpoint, result)` — format alert message with emoji, details, causes, link
-- `formatDailyDigest(summary)` — format "All operational" or "N endpoints degraded" summary
-- `formatGroupedAlert(transitions)` — combine multiple transitions into one message
+- `sendMessage(chatId, text, parseMode, replyMarkup?)` — POST to Bot API with inline keyboard support
+- `editMessage(chatId, messageId, text, parseMode, replyMarkup?)` — edit existing message in-place
+- `answerCallbackQuery(callbackQueryId, text?)` — acknowledge button press
+- `setWebhook(url, secret)` — register webhook URL with Telegram
+- `deleteWebhook()` — remove webhook
+- `setMyCommands(commands)` — register bot command menu
 - Rate limiting: max 30 messages/second (Telegram limit)
 
-**Step 2: Create cron route handler**
+**Step 2: Create message formatter**
+
+`lib/telegram-messages.ts` — HTML parse mode formatters:
+- `formatStatusOverview(summary)` — full status card with separator lines, uptime %, category counts
+- `formatAlert(transition, endpoint, result)` — alert with emoji, endpoint URL in `<code>`, causes list, impact warning
+- `formatRecovery(endpoint, downtimeSec)` — recovery with downtime duration
+- `formatDailyDigest(summary, stats24h)` — daily report with 24h uptime, incident count, avg response, longest outage, degraded list
+- `formatEndpointDetail(endpoint, result, sparklineData)` — full detail card with ASCII sparkline, block height, chain ID, peers, owner, tags
+- `formatCategoryDetail(category, results)` — category endpoint list with status dots
+- `formatGroupedAlert(transitions)` — combine multiple transitions into one message
+- `formatHelp()` — command list card
+- `asciiSparkline(points, width)` — map response times to `▁▂▃▄▅▆▇█` Unicode blocks
+
+**Step 3: Create keyboard builder**
+
+`lib/telegram-keyboards.ts` — inline keyboard factories:
+- `overviewKeyboard(categoryCounts)` — 2-column grid: category buttons with emoji + count, plus Refresh
+- `categoryKeyboard(category, results)` — endpoint buttons with status emoji, plus Back + Refresh
+- `endpointKeyboard(endpoint)` — Open Endpoint / Docs / Repo buttons, plus Back + Re-check
+- `refreshKeyboard()` — single Refresh button for alerts
+- Callback data format: `cat:blockchain`, `ep:mainnet-evm-rpc`, `refresh`, `back:overview`, `back:cat:blockchain`, `recheck:mainnet-evm-rpc`
+
+**Step 4: Create cron route handler**
 
 `app/api/cron/route.ts`:
 - `export const runtime = "nodejs"`
@@ -732,28 +758,94 @@ git commit -m "feat: add keyframe animations, gradients, and reduced-motion supp
 - Recovery delay: only send recovery after 2 consecutive UP checks
 - Daily digest: check `digest:last`, send at 08:00 UTC if due
 - Save new state to KV
+- Send to channel + all subscriber DMs
 
-**Step 3: Update vercel.json**
+**Step 5: Update vercel.json**
 
 ```json
 {
   "crons": [{ "path": "/api/cron", "schedule": "* * * * *" }],
   "functions": {
     "app/api/health/route.ts": { "maxDuration": 30 },
-    "app/api/cron/route.ts": { "maxDuration": 30 }
+    "app/api/cron/route.ts": { "maxDuration": 30 },
+    "app/api/telegram/webhook/route.ts": { "maxDuration": 15 }
   }
 }
 ```
 
-**Step 4: Test locally with mock KV**
+**Step 6: Register bot commands**
 
-For local dev, create a simple in-memory KV mock. Test transition detection logic manually by comparing two health check results.
+Create a one-time setup script or init route that calls `setMyCommands`:
+```typescript
+const commands = [
+  { command: "status", description: "Full infrastructure status overview" },
+  { command: "check", description: "Check a specific endpoint" },
+  { command: "category", description: "List endpoints in a category" },
+  { command: "down", description: "List all DOWN endpoints" },
+  { command: "degraded", description: "List all DEGRADED endpoints" },
+  { command: "subscribe", description: "Subscribe to DM alerts" },
+  { command: "unsubscribe", description: "Unsubscribe from DM alerts" },
+  { command: "ping", description: "Bot health check" },
+  { command: "help", description: "Show all commands" },
+];
+```
 
-**Step 5: Commit**
+**Step 7: Test locally with mock KV**
+
+For local dev, create a simple in-memory KV mock. Test transition detection and message formatting manually.
+
+**Step 8: Commit**
 
 ```bash
-git add lib/telegram.ts app/api/cron/route.ts vercel.json
-git commit -m "feat: add Telegram bot with Vercel Cron, flap protection, and daily digest"
+git add lib/telegram.ts lib/telegram-messages.ts lib/telegram-keyboards.ts app/api/cron/route.ts vercel.json
+git commit -m "feat: add Telegram bot core — alerts, message formatting, inline keyboards, cron"
+```
+
+---
+
+### Task 11b: Implement Telegram webhook handler
+
+**Files:**
+- Create: `app/api/telegram/webhook/route.ts`
+
+**Step 1: Create webhook route**
+
+`app/api/telegram/webhook/route.ts`:
+- Verify `X-Telegram-Bot-Api-Secret-Token` header matches `TELEGRAM_WEBHOOK_SECRET`
+- Parse incoming update: detect `message` (commands) vs `callback_query` (button presses)
+- Command router:
+  - `/status` → fetch health, send overview card + overview keyboard
+  - `/check <name>` → fuzzy match endpoint name, send detail card + endpoint keyboard
+  - `/category <name>` → match category, send category card + category keyboard
+  - `/down` → filter DOWN results, send list with causes
+  - `/degraded` → filter DEGRADED results, send list
+  - `/subscribe` → add chat ID to `subscribers` set in KV, confirm
+  - `/unsubscribe` → remove chat ID from KV, confirm
+  - `/ping` → reply "Pong! Latency: {ms}ms"
+  - `/help` → send formatted help card
+- Callback query router:
+  - `cat:{category}` → edit message to category detail + category keyboard
+  - `ep:{endpoint_id}` → edit message to endpoint detail + endpoint keyboard
+  - `refresh` → re-fetch health, edit message with fresh data
+  - `back:overview` → edit message back to overview
+  - `back:cat:{category}` → edit message back to category
+  - `recheck:{endpoint_id}` → run single check, edit message with result
+- Always call `answerCallbackQuery` to dismiss loading spinner
+
+**Step 2: Test with ngrok**
+
+```bash
+npm run dev
+ngrok http 3000
+# Set webhook: curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<ngrok>/api/telegram/webhook&secret_token=<SECRET>"
+```
+Test: send `/status` to bot, verify overview card with buttons appears. Click buttons, verify edit-in-place.
+
+**Step 3: Commit**
+
+```bash
+git add app/api/telegram/webhook/route.ts
+git commit -m "feat: add Telegram webhook handler — commands, callback queries, inline navigation"
 ```
 
 ---
