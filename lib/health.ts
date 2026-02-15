@@ -1,0 +1,521 @@
+// lib/health.ts — Health check engine for Integra status page
+import http from "http";
+import https from "https";
+import { URL } from "url";
+import type { Endpoint, CheckResult, CheckType, Status } from "./types";
+import { getEndpoints, CHAIN_HALT_THRESHOLD_SECONDS } from "./health-config";
+import type { Category, Environment } from "./types";
+
+// ---------------------------------------------------------------------------
+// HTTP helpers
+// ---------------------------------------------------------------------------
+
+type HttpResponse = {
+  statusCode: number;
+  headers: http.IncomingHttpHeaders;
+  body: string;
+  responseTimeMs: number;
+};
+
+type HttpRequestOptions = {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+  timeout?: number;
+};
+
+function httpRequest(url: string, opts: HttpRequestOptions = {}): Promise<HttpResponse> {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const mod = parsed.protocol === "https:" ? https : http;
+    const timeout = opts.timeout || 10000;
+    const reqOpts: https.RequestOptions = {
+      hostname: parsed.hostname,
+      port: parsed.port || (parsed.protocol === "https:" ? 443 : 80),
+      path: parsed.pathname + parsed.search,
+      method: opts.method || "GET",
+      headers: { "User-Agent": "integra-health/1.0", ...(opts.headers || {}) },
+      timeout,
+      rejectUnauthorized: false,
+    };
+    const start = Date.now();
+    const req = mod.request(reqOpts, (res) => {
+      let body = "";
+      res.on("data", (chunk: Buffer) => {
+        body += chunk;
+      });
+      res.on("end", () => {
+        resolve({
+          statusCode: res.statusCode ?? 0,
+          headers: res.headers,
+          body,
+          responseTimeMs: Date.now() - start,
+        });
+      });
+    });
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("timeout"));
+    });
+    req.on("error", (err) => reject(err));
+    if (opts.body) req.write(opts.body);
+    req.end();
+  });
+}
+
+function jsonRpc(
+  url: string,
+  method: string,
+  params: unknown[] = [],
+  timeout?: number,
+): Promise<HttpResponse> {
+  return httpRequest(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+    timeout,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Result builder
+// ---------------------------------------------------------------------------
+
+function buildResult(
+  ep: Endpoint,
+  status: Status,
+  responseTimeMs: number,
+  details?: Record<string, unknown>,
+  error?: string,
+): CheckResult {
+  return {
+    id: ep.id,
+    name: ep.name,
+    url: ep.url,
+    category: ep.category,
+    environment: ep.environment || "prod",
+    status,
+    responseTimeMs,
+    timestamp: new Date().toISOString(),
+    details: details || {},
+    error: error || null,
+    dependsOn: ep.dependsOn || [],
+    impacts: ep.impacts || [],
+    impactDescription: ep.impactDescription || null,
+    description: ep.description || null,
+    richDescription: ep.richDescription || null,
+    owner: ep.owner || null,
+    links: ep.links,
+    commonIssues: ep.commonIssues || [],
+    tags: ep.tags || [],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Check functions — one per CheckType
+// ---------------------------------------------------------------------------
+
+async function checkEvmRpc(ep: Endpoint): Promise<CheckResult> {
+  const details: Record<string, unknown> = {};
+  const start = Date.now();
+
+  const blockRes = await jsonRpc(ep.url, "eth_blockNumber", [], ep.timeout);
+  const blockData = JSON.parse(blockRes.body);
+  if (blockData.error) throw new Error(blockData.error.message || "eth_blockNumber failed");
+  details.blockHeight = parseInt(blockData.result, 16);
+
+  const chainRes = await jsonRpc(ep.url, "eth_chainId", [], ep.timeout);
+  const chainData = JSON.parse(chainRes.body);
+  details.chainId = chainData.result;
+  if (ep.expectedChainId && chainData.result !== ep.expectedChainId) {
+    return buildResult(
+      ep,
+      "DEGRADED",
+      Date.now() - start,
+      details,
+      `Chain ID mismatch: expected ${ep.expectedChainId}, got ${chainData.result}`,
+    );
+  }
+
+  const syncRes = await jsonRpc(ep.url, "eth_syncing", [], ep.timeout);
+  const syncData = JSON.parse(syncRes.body);
+  if (!syncData.error) {
+    details.syncing = syncData.result !== false;
+    if (details.syncing)
+      return buildResult(ep, "DEGRADED", Date.now() - start, details, "Node is syncing");
+  }
+
+  const peerRes = await jsonRpc(ep.url, "net_peerCount", [], ep.timeout);
+  const peerData = JSON.parse(peerRes.body);
+  details.peerCount = peerData.result ? parseInt(peerData.result, 16) : null;
+
+  return buildResult(ep, "UP", Date.now() - start, details);
+}
+
+async function checkCosmosRpc(ep: Endpoint): Promise<CheckResult> {
+  const details: Record<string, unknown> = {};
+  const start = Date.now();
+
+  const statusRes = await httpRequest(`${ep.url}/status`, { timeout: ep.timeout });
+  if (statusRes.statusCode !== 200) throw new Error(`HTTP ${statusRes.statusCode}`);
+  const statusData = JSON.parse(statusRes.body);
+  const syncInfo = statusData.result ? statusData.result.sync_info : statusData.sync_info;
+
+  if (syncInfo) {
+    details.blockHeight = parseInt(syncInfo.latest_block_height, 10);
+    details.latestBlockTime = syncInfo.latest_block_time;
+    details.catchingUp = syncInfo.catching_up;
+
+    const blockAge = (Date.now() - new Date(syncInfo.latest_block_time).getTime()) / 1000;
+    details.blockAgeSec = Math.round(blockAge);
+
+    if (blockAge > CHAIN_HALT_THRESHOLD_SECONDS) {
+      return buildResult(
+        ep,
+        "DEGRADED",
+        Date.now() - start,
+        details,
+        `Possible chain halt — last block ${Math.round(blockAge)}s ago`,
+      );
+    }
+    if (syncInfo.catching_up) {
+      return buildResult(ep, "DEGRADED", Date.now() - start, details, "Node is catching up");
+    }
+  }
+
+  try {
+    const netRes = await httpRequest(`${ep.url}/net_info`, { timeout: ep.timeout });
+    if (netRes.statusCode === 200) {
+      const netData = JSON.parse(netRes.body);
+      const peers = netData.result ? netData.result.peers : netData.peers;
+      details.peerCount = Array.isArray(peers)
+        ? peers.length
+        : parseInt(netData.result?.n_peers, 10) || null;
+    }
+  } catch (_) {
+    // net_info is optional — swallow errors
+  }
+
+  return buildResult(ep, "UP", Date.now() - start, details);
+}
+
+async function checkCosmosRest(ep: Endpoint): Promise<CheckResult> {
+  const details: Record<string, unknown> = {};
+  const start = Date.now();
+
+  const blockRes = await httpRequest(
+    `${ep.url}/cosmos/base/tendermint/v1beta1/blocks/latest`,
+    { timeout: ep.timeout },
+  );
+  if (blockRes.statusCode !== 200) throw new Error(`HTTP ${blockRes.statusCode}`);
+  const blockData = JSON.parse(blockRes.body);
+  const header = blockData.block?.header || blockData.sdk_block?.header;
+
+  if (header) {
+    details.blockHeight = parseInt(header.height, 10);
+    details.latestBlockTime = header.time;
+    details.chainId = header.chain_id;
+
+    const blockAge = (Date.now() - new Date(header.time).getTime()) / 1000;
+    details.blockAgeSec = Math.round(blockAge);
+
+    if (blockAge > CHAIN_HALT_THRESHOLD_SECONDS) {
+      return buildResult(
+        ep,
+        "DEGRADED",
+        Date.now() - start,
+        details,
+        `Possible chain halt — last block ${Math.round(blockAge)}s ago`,
+      );
+    }
+  }
+
+  try {
+    const valRes = await httpRequest(
+      `${ep.url}/cosmos/staking/v1beta1/validators?status=BOND_STATUS_BONDED&pagination.limit=100`,
+      { timeout: ep.timeout },
+    );
+    if (valRes.statusCode === 200) {
+      const valData = JSON.parse(valRes.body);
+      details.bondedValidators = valData.validators ? valData.validators.length : null;
+    }
+  } catch (_) {
+    // validator count is optional — swallow errors
+  }
+
+  return buildResult(ep, "UP", Date.now() - start, details);
+}
+
+async function checkHttpJson(ep: Endpoint): Promise<CheckResult> {
+  const start = Date.now();
+  const res = await httpRequest(ep.url, { timeout: ep.timeout });
+  if (res.statusCode < 200 || res.statusCode >= 400) throw new Error(`HTTP ${res.statusCode}`);
+
+  const data = JSON.parse(res.body);
+  const details: Record<string, unknown> = { statusCode: res.statusCode };
+
+  if (ep.expectedField && !(ep.expectedField in data)) {
+    return buildResult(
+      ep,
+      "DEGRADED",
+      Date.now() - start,
+      details,
+      `Missing expected field: ${ep.expectedField}`,
+    );
+  }
+
+  return buildResult(ep, "UP", Date.now() - start, details);
+}
+
+async function checkHttpGet(ep: Endpoint): Promise<CheckResult> {
+  const start = Date.now();
+  const res = await httpRequest(ep.url, { timeout: ep.timeout });
+  if (res.statusCode >= 200 && res.statusCode < 400) {
+    return buildResult(ep, "UP", Date.now() - start, { statusCode: res.statusCode });
+  }
+  throw new Error(`HTTP ${res.statusCode}`);
+}
+
+async function checkWebsocket(ep: Endpoint): Promise<CheckResult> {
+  const start = Date.now();
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(ep.url.replace("wss://", "https://").replace("ws://", "http://"));
+    const mod = parsed.protocol === "https:" ? https : http;
+    const req = mod.request(
+      {
+        hostname: parsed.hostname,
+        port: parsed.port || (parsed.protocol === "https:" ? 443 : 80),
+        path: parsed.pathname || "/",
+        method: "GET",
+        headers: {
+          Upgrade: "websocket",
+          Connection: "Upgrade",
+          "Sec-WebSocket-Key": Buffer.from(Math.random().toString()).toString("base64"),
+          "Sec-WebSocket-Version": "13",
+        },
+        timeout: ep.timeout,
+        rejectUnauthorized: false,
+      },
+      (res) => {
+        if (res.statusCode && res.statusCode < 400) {
+          resolve(buildResult(ep, "UP", Date.now() - start, { statusCode: res.statusCode }));
+        } else {
+          reject(new Error(`HTTP ${res.statusCode}`));
+        }
+      },
+    );
+    req.on("upgrade", (_res, socket) => {
+      socket.destroy();
+      resolve(buildResult(ep, "UP", Date.now() - start, { upgraded: true }));
+    });
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("timeout"));
+    });
+    req.on("error", (err) => reject(err));
+    req.end();
+  });
+}
+
+async function checkApiHealth(ep: Endpoint): Promise<CheckResult> {
+  const start = Date.now();
+  const res = await httpRequest(ep.url, { timeout: ep.timeout });
+  const details: Record<string, unknown> = { statusCode: res.statusCode };
+
+  if (res.statusCode >= 200 && res.statusCode < 400) {
+    try {
+      const data = JSON.parse(res.body);
+      if (data.status) details.healthStatus = data.status;
+      if (data.version) details.version = data.version;
+    } catch (_) {
+      // body may not be JSON — that's fine
+    }
+    return buildResult(ep, "UP", Date.now() - start, details);
+  }
+  throw new Error(`HTTP ${res.statusCode}`);
+}
+
+async function checkHttpReachable(ep: Endpoint): Promise<CheckResult> {
+  const start = Date.now();
+  const res = await httpRequest(ep.url, { timeout: ep.timeout });
+  const details: Record<string, unknown> = { statusCode: res.statusCode };
+  if (res.statusCode < 500) return buildResult(ep, "UP", Date.now() - start, details);
+  throw new Error(`HTTP ${res.statusCode}`);
+}
+
+async function checkGraphql(ep: Endpoint): Promise<CheckResult> {
+  const start = Date.now();
+  const body = JSON.stringify({ query: "{ __typename }" });
+  const res = await httpRequest(ep.url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+    timeout: ep.timeout,
+  });
+  const details: Record<string, unknown> = { statusCode: res.statusCode };
+
+  if (res.statusCode >= 200 && res.statusCode < 400) {
+    try {
+      const data = JSON.parse(res.body);
+      if (data.data) return buildResult(ep, "UP", Date.now() - start, details);
+      if (data.errors) {
+        return buildResult(
+          ep,
+          "DEGRADED",
+          Date.now() - start,
+          details,
+          data.errors[0]?.message || "GraphQL errors",
+        );
+      }
+    } catch (_) {
+      // body may not be valid JSON
+    }
+    return buildResult(ep, "UP", Date.now() - start, details);
+  }
+  throw new Error(`HTTP ${res.statusCode}`);
+}
+
+async function checkDeepHealth(ep: Endpoint): Promise<CheckResult> {
+  const start = Date.now();
+  const healthUrl = ep.healthUrl || ep.url + "/health";
+  const res = await httpRequest(healthUrl, { timeout: ep.timeout });
+  const details: Record<string, unknown> = { statusCode: res.statusCode };
+
+  if (res.statusCode === 404) {
+    const fallbackRes = await httpRequest(ep.url, { timeout: ep.timeout });
+    if (fallbackRes.statusCode < 500) {
+      return buildResult(ep, "UP", Date.now() - start, {
+        statusCode: fallbackRes.statusCode,
+        fallback: true,
+      });
+    }
+    throw new Error("HTTP " + fallbackRes.statusCode);
+  }
+
+  if (res.statusCode >= 200 && res.statusCode < 400) {
+    try {
+      const data = JSON.parse(res.body);
+      if (data.status) details.healthStatus = data.status;
+      if (data.version) details.version = data.version;
+      if (data.uptime) details.uptime = data.uptime;
+
+      const components = data.components || data.checks || data.dependencies;
+      if (components) {
+        details.components = components;
+        const keys = Object.keys(components as Record<string, unknown>);
+        for (const key of keys) {
+          const comp = (components as Record<string, unknown>)[key];
+          const compStatus =
+            typeof comp === "object" && comp !== null
+              ? (comp as Record<string, unknown>).status || (comp as Record<string, unknown>).state
+              : comp;
+          if (compStatus && /down|unhealthy|error|fail/i.test(String(compStatus))) {
+            return buildResult(ep, "DEGRADED", Date.now() - start, details, key + " is unhealthy");
+          }
+        }
+      }
+
+      if (data.status && /down|unhealthy|error/i.test(data.status)) {
+        return buildResult(
+          ep,
+          "DEGRADED",
+          Date.now() - start,
+          details,
+          "Health reports: " + data.status,
+        );
+      }
+      return buildResult(ep, "UP", Date.now() - start, details);
+    } catch (_) {
+      return buildResult(ep, "UP", Date.now() - start, details);
+    }
+  }
+  throw new Error("HTTP " + res.statusCode);
+}
+
+async function checkCosmosPeer(ep: Endpoint): Promise<CheckResult> {
+  const start = Date.now();
+  const peerIp = ep.peerIp || new URL(ep.url).hostname;
+  const publicRpc = ep.publicRpc || "https://rpc.integralayer.com";
+
+  const res = await httpRequest(`${publicRpc}/net_info`, { timeout: ep.timeout });
+  if (res.statusCode !== 200)
+    throw new Error(`Public RPC returned HTTP ${res.statusCode}`);
+
+  const data = JSON.parse(res.body);
+  const peers: Array<{
+    remote_ip: string;
+    node_info?: { moniker?: string; id?: string };
+  }> = (data.result && data.result.peers) || [];
+  const details: Record<string, unknown> = { totalPeers: peers.length };
+
+  for (const peer of peers) {
+    if (peer.remote_ip === peerIp) {
+      details.moniker = peer.node_info ? peer.node_info.moniker : null;
+      details.peerId = peer.node_info ? peer.node_info.id : null;
+      return buildResult(ep, "UP", Date.now() - start, details);
+    }
+  }
+
+  return buildResult(ep, "DEGRADED", Date.now() - start, details, "Validator not found in peer list");
+}
+
+// ---------------------------------------------------------------------------
+// Check dispatch
+// ---------------------------------------------------------------------------
+
+type CheckFn = (ep: Endpoint) => Promise<CheckResult>;
+
+const CHECK_FNS: Record<CheckType, CheckFn> = {
+  "evm-rpc": checkEvmRpc,
+  "cosmos-rpc": checkCosmosRpc,
+  "cosmos-rest": checkCosmosRest,
+  "http-json": checkHttpJson,
+  "http-get": checkHttpGet,
+  websocket: checkWebsocket,
+  "api-health": checkApiHealth,
+  "http-reachable": checkHttpReachable,
+  "deep-health": checkDeepHealth,
+  graphql: checkGraphql,
+  "cosmos-peer-check": checkCosmosPeer,
+};
+
+export async function runCheck(ep: Endpoint): Promise<CheckResult> {
+  const fn = CHECK_FNS[ep.checkType];
+  if (!fn) return buildResult(ep, "DOWN", 0, {}, `Unknown check type: ${ep.checkType}`);
+  try {
+    return await fn(ep);
+  } catch (err: unknown) {
+    const error = err as NodeJS.ErrnoException;
+    const isFirewall =
+      error.code === "ECONNREFUSED" ||
+      error.code === "ECONNRESET" ||
+      error.code === "EHOSTUNREACH";
+    const status: Status =
+      ep.category === "validators" && isFirewall ? "DEGRADED" : "DOWN";
+    const errMsg =
+      ep.category === "validators" && isFirewall
+        ? "Unreachable (likely firewalled)"
+        : error.message || String(err);
+    return buildResult(ep, status, 0, {}, errMsg);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Run all checks
+// ---------------------------------------------------------------------------
+
+type CheckAllOptions = {
+  enabledOnly?: boolean;
+  category?: Category;
+  environment?: Environment;
+};
+
+export async function checkAll(opts?: CheckAllOptions): Promise<CheckResult[]> {
+  const endpoints = getEndpoints({ enabledOnly: true, ...opts });
+  const results = await Promise.allSettled(endpoints.map(runCheck));
+  return results.map((r, i) =>
+    r.status === "fulfilled"
+      ? r.value
+      : buildResult(endpoints[i], "DOWN", 0, {}, r.reason?.message || "Check failed"),
+  );
+}
