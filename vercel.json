@@ -1,7 +1,17 @@
 {
+  "crons": [{ "path": "/api/cron", "schedule": "* * * * *" }],
   "functions": {
     "api/health.js": {
       "maxDuration": 30
+    },
+    "app/api/health/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/cron/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/telegram/webhook/route.ts": {
+      "maxDuration": 15
     }
   },
   "rewrites": [
