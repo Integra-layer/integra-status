@@ -104,6 +104,27 @@ export function EndpointCard({
                   {description}
                 </p>
               )}
+              {result.owner && (
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  <span aria-hidden="true">👤</span>{" "}
+                  {result.owner.name}
+                  {result.owner.telegram && (
+                    <>
+                      {" · "}
+                      <span
+                        className="text-primary hover:underline"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          window.open(`https://t.me/${result.owner!.telegram}`, "_blank");
+                        }}
+                      >
+                        @{result.owner.telegram}
+                      </span>
+                    </>
+                  )}
+                </p>
+              )}
             </div>
           </div>
 

@@ -31,7 +31,7 @@ integra-status/
 │   ├── summary-bar.tsx         # Sticky: up/degraded/down pills with counters
 │   ├── search-bar.tsx          # Debounced search + category filter chips
 │   ├── category-section.tsx    # Collapsible category with status border
-│   ├── endpoint-card.tsx       # Status dot, sparkline, links, troubleshooting
+│   ├── endpoint-card.tsx       # Status dot, sparkline, links, owner pill, troubleshooting
 │   ├── status-badge.tsx        # UP/DOWN/DEGRADED with pulsing dot
 │   ├── sparkline.tsx           # Inline SVG with draw animation + hover tooltip
 │   ├── endpoint-links.tsx      # Endpoint/docs/repo icon links
@@ -43,12 +43,12 @@ integra-status/
 │   ├── integra-logo.tsx        # SVG logo (full/mark variants)
 │   └── ui/                     # shadcn/ui components
 ├── lib/
-│   ├── types.ts                # TypeScript types
-│   ├── health-config.ts        # 68 endpoints with links + commonIssues
+│   ├── types.ts                # TypeScript types (Owner has telegram field)
+│   ├── health-config.ts        # 68 endpoints, OWNERS with Telegram handles, CTO_TELEGRAM
 │   ├── health.ts               # 11 check type implementations
 │   ├── history.ts              # Ring buffer for sparklines/incidents
 │   ├── telegram.ts             # Telegram Bot API wrapper
-│   ├── telegram-messages.ts    # Message formatters (HTML parse mode)
+│   ├── telegram-messages.ts    # Message formatters (HTML parse mode) with owner @mentions
 │   ├── telegram-keyboards.ts   # Inline keyboard builders
 │   ├── animations.ts           # Animation timing constants
 │   └── utils.ts                # cn() utility (clsx + tailwind-merge)
@@ -93,21 +93,45 @@ npx tsc --noEmit  # type-check without building
 
 | Variable | Description |
 |----------|-------------|
-| `TELEGRAM_BOT_TOKEN` | @IntegraWatchBot token |
+| `TELEGRAM_BOT_TOKEN` | @IntegraHealthBot token |
 | `TELEGRAM_CHANNEL_ID` | Alert channel chat ID |
 | `TELEGRAM_WEBHOOK_SECRET` | Webhook verification secret |
 | `CRON_SECRET` | Cron endpoint auth secret |
 | `KV_REST_API_URL` | Vercel KV endpoint (state storage for alert transitions) |
 | `KV_REST_API_TOKEN` | Vercel KV auth token |
 
+## Ownership Model
+
+Every endpoint has an `owner` (defined in `OWNERS` in `lib/health-config.ts`). Each owner has a `telegram` handle used for @mentions in alerts.
+
+| Key | Name | Telegram | Primary Responsibility |
+|-----|------|----------|----------------------|
+| adam | Adam Boudj | @adamboudj | Blockchain infra, validators, explorer, status page, docs |
+| nawar | Nawar | @iamnawar | Backend APIs (passport, dashboard, notification) |
+| kalki | Kalki | @yourdevkalki | City APIs, City frontends, DiceBear |
+| tara | Tara | @TaraMathews | Frontend (dashboard, website, whitepaper, portal, staking) |
+| parth | Parth | @parthbisht22 | External APIs (supply, price, web3auth, absinthe, walletconnect) |
+
+### Alert @mention logic
+
+- **DOWN/DEGRADED alerts** (`formatAlert`): `👤 Owner: @handle` + `cc @adamboudj` (CTO always pinged unless Adam IS the owner)
+- **Recovery alerts** (`formatRecovery`): Same pattern — owners know when their service recovers
+- **Grouped alerts** (`formatGroupedAlert`): Collects unique handles from all transitions, deduplicates, always includes CTO
+- The `CTO_TELEGRAM` constant in `health-config.ts` controls the always-ping handle
+
+### Website display
+
+- **Endpoint cards** (`endpoint-card.tsx`): Show `👤 Owner · @handle` with clickable Telegram link
+- **Service detail page** (`app/service/[id]/page.tsx`): Shows `Owner — @handle` (linked) plus role
+
 ## Key Points
 
 - 68 endpoints across 5 categories (blockchain, validators, apis, frontends, external)
 - 11 check types: evm-rpc, cosmos-rpc, cosmos-rest, http-json, http-get, websocket, api-health, http-reachable, deep-health, graphql, cosmos-peer-check
-- Each endpoint has inline troubleshooting hints and direct links
-- Telegram bot supports 9 commands + inline keyboard navigation
+- Each endpoint has inline troubleshooting hints, direct links, and owner attribution
+- Telegram bot (@IntegraHealthBot) supports 9 commands + inline keyboard navigation
 - ISR with 30s revalidation — page cached between checks, loads fast
-- Cron alerts with flap protection and recovery delay
+- Cron alerts with flap protection, recovery delay, and owner @mentions
 - History stored in `/tmp/integra-history.json` (ring buffer, 120 snapshots)
 
 ## Gotchas

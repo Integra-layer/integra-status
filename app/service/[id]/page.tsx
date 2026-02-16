@@ -121,8 +121,32 @@ export default async function ServiceDetailPage({
             <div>
               <p className="text-xs text-text-muted">Owner</p>
               <p className="text-sm font-medium">
-                {result.owner?.name ?? "\u2014"}
+                {result.owner ? (
+                  <>
+                    {result.owner.name}
+                    {result.owner.telegram && (
+                      <>
+                        {" — "}
+                        <a
+                          href={`https://t.me/${result.owner.telegram}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          @{result.owner.telegram}
+                        </a>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  "\u2014"
+                )}
               </p>
+              {result.owner?.role && (
+                <p className="text-xs text-text-muted mt-0.5">
+                  {result.owner.role}
+                </p>
+              )}
             </div>
             <div>
               <p className="text-xs text-text-muted">Uptime</p>

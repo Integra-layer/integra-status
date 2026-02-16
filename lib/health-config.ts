@@ -9,14 +9,17 @@ export const CATEGORIES: Category[] = ["blockchain", "validators", "apis", "fron
 export const ENVIRONMENTS: Environment[] = ["prod", "dev", "staging", "release"];
 export const CHAIN_HALT_THRESHOLD_SECONDS = 60;
 
-// Owner constants — real team members with email contacts
+// Owner constants — real team members with email contacts + Telegram handles
 export const OWNERS: Record<string, Owner> = {
-  adam:  { name: "Adam Boudj",  role: "CTO / Infrastructure",    contact: "adam@integralayer.com" },
-  nawar: { name: "Nawar",       role: "Backend Engineering",      contact: "nawar@integralayer.com" },
-  kalki: { name: "Kalki",       role: "Full-Stack / Explorer",    contact: "kalki@integralayer.com" },
-  tara:  { name: "Tara",        role: "Frontend Engineering",     contact: "tara@integralayer.com" },
-  parth: { name: "Parth",       role: "APIs / External Services", contact: "parth@integralayer.com" },
+  adam:  { name: "Adam Boudj",  role: "CTO / Infrastructure",    contact: "adam@integralayer.com",  telegram: "adamboudj" },
+  nawar: { name: "Nawar",       role: "Backend Engineering",      contact: "nawar@integralayer.com", telegram: "iamnawar" },
+  kalki: { name: "Kalki",       role: "Full-Stack / Explorer",    contact: "kalki@integralayer.com", telegram: "yourdevkalki" },
+  tara:  { name: "Tara",        role: "Frontend Engineering",     contact: "tara@integralayer.com",  telegram: "TaraMathews" },
+  parth: { name: "Parth",       role: "APIs / External Services", contact: "parth@integralayer.com", telegram: "parthbisht22" },
 };
+
+// CTO Telegram handle — always pinged on DOWN/DEGRADED alerts (unless CTO is the owner)
+export const CTO_TELEGRAM = "adamboudj";
 
 // ---------------------------------------------------------------------------
 // Common issue templates by check type / infrastructure
@@ -729,7 +732,7 @@ export const ENDPOINTS: Endpoint[] = [
     impacts: [],
     description: "Block explorer for mainnet — transactions, blocks, validators",
     richDescription: "The mainnet block explorer built with Next.js and deployed on Vercel, providing transaction lookup, block browsing, validator profiles, governance proposal tracking, and account balance queries. This is the primary tool for anyone inspecting on-chain activity — validators checking their signing status, users verifying transactions, and developers debugging contract interactions. Depends on both the Cosmos RPC (for real-time blocks) and REST/LCD (for validator and governance data). Contact Kalki for explorer application issues.",
-    owner: OWNERS.kalki,
+    owner: OWNERS.adam,
     links: { endpoint: "https://explorer.integralayer.com", docs: "https://docs.integralayer.com", repo: "https://github.com/Integra-layer/explorer" },
     commonIssues: vercelFrontendIssues,
     tags: ["Next.js", "Vercel"],
@@ -747,7 +750,7 @@ export const ENDPOINTS: Endpoint[] = [
     impacts: [],
     description: "Block explorer for testnet — development testing",
     richDescription: "Testnet block explorer for the Ormos chain, running the same Next.js codebase as the mainnet explorer but connected to testnet RPC and REST endpoints. Used daily by the dev team to verify test transactions, inspect testnet blocks, and validate governance features during QA. Depends on testnet Cosmos RPC and REST. If down, developers lose visibility into testnet chain activity and must resort to CLI queries for debugging.",
-    owner: OWNERS.kalki,
+    owner: OWNERS.adam,
     links: { endpoint: "https://testnet.explorer.integralayer.com", docs: "https://docs.integralayer.com", repo: "https://github.com/Integra-layer/explorer" },
     commonIssues: vercelFrontendIssues,
     tags: ["Next.js", "Vercel"],
@@ -889,7 +892,7 @@ export const ENDPOINTS: Endpoint[] = [
     impacts: [],
     description: "Developer documentation and integration guides",
     richDescription: "Developer documentation site built with Docusaurus and hosted on Vercel, containing API references, SDK integration guides, node operator runbooks, architecture overviews, and smart contract documentation. This is the first stop for external developers integrating with Integra and for internal team members referencing API specs. If down, developer onboarding stalls and the team loses access to canonical API documentation. Contact Tara for content updates or Vercel deployment issues.",
-    owner: OWNERS.tara,
+    owner: OWNERS.adam,
     links: { endpoint: "https://docs.integralayer.com", docs: "https://docs.integralayer.com" },
     commonIssues: vercelFrontendIssues,
     tags: ["Docusaurus", "Vercel"],

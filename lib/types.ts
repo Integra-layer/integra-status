@@ -21,6 +21,7 @@ export type Owner = {
   name: string;
   role: string;
   contact: string;
+  telegram: string;
 };
 
 export type CommonIssue = {

@@ -1,6 +1,7 @@
-// lib/telegram-messages.ts — Message formatters (HTML parse mode) for @IntegraWatchBot
+// lib/telegram-messages.ts — Message formatters (HTML parse mode) for @IntegraHealthBot
 
 import type { CheckResult, HealthSummary } from "./types";
+import { CTO_TELEGRAM } from "./health-config";
 
 export function formatStatusOverview(summary: HealthSummary): string {
   const lines = [
@@ -64,6 +65,14 @@ export function formatAlert(
     lines.push(``, `\u26A0\uFE0F <b>Impact:</b> ${result.impactDescription}`);
   }
 
+  // Owner @mention + CTO ping (avoid double mention if CTO is the owner)
+  if (result.owner?.telegram) {
+    lines.push(``, `\uD83D\uDC64 Owner: @${result.owner.telegram}`);
+    if (result.owner.telegram !== CTO_TELEGRAM) {
+      lines.push(`cc @${CTO_TELEGRAM}`);
+    }
+  }
+
   lines.push(
     `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501`,
   );
@@ -78,16 +87,27 @@ export function formatRecovery(
   const secs = downtimeSeconds % 60;
   const duration = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
 
-  return [
+  const lines = [
     `\uD83D\uDFE2 <b>RECOVERED: ${result.name}</b>`,
     ``,
     `\u23F1 Recovered: ${new Date().toISOString().replace("T", " ").slice(0, 19)} UTC`,
     `\u23F3 Downtime: <b>${duration}</b>`,
     `\uD83D\uDCC8 Response: ${result.responseTimeMs}ms`,
+  ];
+
+  if (result.owner?.telegram) {
+    lines.push(``, `\uD83D\uDC64 Owner: @${result.owner.telegram}`);
+    if (result.owner.telegram !== CTO_TELEGRAM) {
+      lines.push(`cc @${CTO_TELEGRAM}`);
+    }
+  }
+
+  lines.push(
     ``,
     `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501`,
     `All systems operational \u2713`,
-  ].join("\n");
+  );
+  return lines.join("\n");
 }
 
 export function formatEndpointDetail(
@@ -176,12 +196,24 @@ export function formatGroupedAlert(
   lines.push(
     `\u23F1 ${new Date().toISOString().replace("T", " ").slice(0, 19)} UTC`,
   );
+
+  // Collect unique owner handles from all transitions, always include CTO
+  const handles = new Set<string>();
+  handles.add(CTO_TELEGRAM);
+  for (const t of transitions) {
+    if (t.result.owner?.telegram) {
+      handles.add(t.result.owner.telegram);
+    }
+  }
+  const mentions = [...handles].map((h) => `@${h}`).join(" ");
+  lines.push(`\uD83D\uDC64 cc ${mentions}`);
+
   return lines.join("\n");
 }
 
 export function formatHelp(): string {
   return [
-    `\u2B21 <b>IntegraWatchBot Commands</b>`,
+    `\u2B21 <b>IntegraHealthBot Commands</b>`,
     ``,
     `/status \u2014 Full infrastructure overview`,
     `/check &lt;name&gt; \u2014 Check specific endpoint`,
