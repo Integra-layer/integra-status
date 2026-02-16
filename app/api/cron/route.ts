@@ -1,7 +1,7 @@
 // app/api/cron/route.ts — Vercel Cron handler for polling + alerts
 
 import { NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
+import { localKv as kv } from "@/lib/local-kv";
 import { checkAll } from "@/lib/health";
 import { APP_GROUPS, CATEGORIES } from "@/lib/health-config";
 import {

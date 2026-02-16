@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
+import { localKv as kv } from "@/lib/local-kv";
 import { checkAll, runCheck } from "@/lib/health";
 import { getEndpoint, getEndpoints, CATEGORIES, APP_GROUPS } from "@/lib/health-config";
 import { loadHistory, getSparklines, getUptimes } from "@/lib/history";
