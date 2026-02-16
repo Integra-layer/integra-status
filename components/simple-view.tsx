@@ -229,8 +229,8 @@ export function SimpleView({ data, categories }: SimpleViewProps) {
         edges={categoryEdges}
       />
 
-      {/* Category Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 items-start">
+      {/* Category Rows — full-width stacked, expand horizontally */}
+      <div className="space-y-3">
         {categoryStats.map((stat, index) => (
           <CategoryCard
             key={stat.category}

@@ -78,8 +78,10 @@ export const CategoryCard = memo(function CategoryCard({
   const responseTimes = stat.results
     .filter((r) => r.status === "UP" && r.responseTimeMs > 0)
     .map((r) => r.responseTimeMs);
-  const minResponse = responseTimes.length > 0 ? Math.min(...responseTimes) : 0;
-  const maxResponse = responseTimes.length > 0 ? Math.max(...responseTimes) : 0;
+  const avgResponse =
+    responseTimes.length > 0
+      ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
+      : 0;
 
   return (
     <div
@@ -88,18 +90,42 @@ export const CategoryCard = memo(function CategoryCard({
         animation: `fade-slide-up 400ms ease-out ${index * 80}ms both`,
       }}
     >
+      {/* Compact single-row header */}
       <button
         type="button"
         onClick={() => setExpanded((p) => !p)}
-        className="w-full p-4 text-left cursor-pointer hover:bg-muted/30 transition-colors"
+        className="w-full px-4 py-3 text-left cursor-pointer hover:bg-muted/30 transition-colors"
         aria-expanded={expanded}
       >
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2.5">
-            <span className="text-text-muted">{meta.icon}</span>
-            <span className="font-semibold text-sm">{meta.label}</span>
+        <div className="flex items-center gap-3">
+          {/* Icon + label */}
+          <span className="text-text-muted flex-shrink-0">{meta.icon}</span>
+          <span className="font-semibold text-sm w-20 sm:w-24 flex-shrink-0">
+            {meta.label}
+          </span>
+
+          {/* Inline progress bar (desktop) */}
+          <div className="h-1.5 flex-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden hidden sm:block">
+            <div
+              className={`h-full rounded-full ${barColor} transition-all duration-500`}
+              style={{ width: `${pct}%` }}
+            />
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Sparkline (desktop) */}
+          {sparkline.length > 1 && (
+            <div className="hidden md:block flex-shrink-0">
+              <MiniSparkline data={sparkline} width={64} height={18} />
+            </div>
+          )}
+
+          {/* Stats cluster */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {avgResponse > 0 && (
+              <span className="text-xs tabular-nums text-text-muted hidden lg:inline">
+                {avgResponse}ms
+              </span>
+            )}
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-medium tabular-nums ${
                 uptime >= 99
@@ -120,52 +146,32 @@ export const CategoryCard = memo(function CategoryCard({
           </div>
         </div>
 
-        <div className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden mb-3">
+        {/* Mobile progress bar (below header) */}
+        <div className="h-1 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden mt-2 sm:hidden">
           <div
             className={`h-full rounded-full ${barColor} transition-all duration-500`}
             style={{ width: `${pct}%` }}
           />
         </div>
-
-        <div className="flex items-end justify-between gap-3">
-          {sparkline.length > 1 && (
-            <MiniSparkline data={sparkline} width={80} height={20} />
-          )}
-
-          <div className="flex items-center gap-2 flex-shrink-0 text-xs text-text-muted">
-            {responseTimes.length > 0 && (
-              <span className="tabular-nums">
-                {minResponse === maxResponse
-                  ? `${minResponse}ms`
-                  : `${minResponse}–${maxResponse}ms`}
-              </span>
-            )}
-            {blastRadius > 0 && (
-              <span className="tabular-nums opacity-70">
-                {blastRadius} impacted
-              </span>
-            )}
-          </div>
-        </div>
       </button>
 
-      {/* Expanded service list — horizontal flow */}
+      {/* Expanded: full-width horizontal service pills */}
       {expanded && (
         <div className="border-t border-border-strong/20 px-4 py-3">
           <div className="flex flex-wrap gap-2">
             {stat.results.map((r) => (
               <div
                 key={r.id}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
                   r.status === "UP"
-                    ? "border-emerald-500/30 bg-emerald-500/5"
+                    ? "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10"
                     : r.status === "DEGRADED"
-                      ? "border-amber-500/30 bg-amber-500/5"
-                      : "border-red-500/30 bg-red-500/5"
+                      ? "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10"
+                      : "border-red-500/30 bg-red-500/5 hover:bg-red-500/10"
                 }`}
               >
                 <span
-                  className={`inline-block h-1.5 w-1.5 rounded-full ${
+                  className={`inline-block h-1.5 w-1.5 rounded-full flex-shrink-0 ${
                     r.status === "UP"
                       ? "bg-emerald-500"
                       : r.status === "DEGRADED"
