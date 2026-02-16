@@ -215,15 +215,15 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
           />
         </div>
 
+        {/* Network graph — visible in both views */}
+        <div className="mb-6">
+          <NetworkGraph data={data} compact={viewMode === "simple"} />
+        </div>
+
         {viewMode === "simple" ? (
           <SimpleView data={data} categories={categories} />
         ) : (
           <>
-            {/* Network graph (collapsible) */}
-            <div className="mb-6">
-              <NetworkGraph data={data} />
-            </div>
-
             {/* Category sections */}
             <div className="space-y-4">
               {categoryResults.map((cat) => (

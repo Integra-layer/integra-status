@@ -5,7 +5,6 @@ import { Activity, Zap, AlertCircle, Radio } from "lucide-react";
 import { getAllBlastRadii } from "@/lib/graph-utils";
 import { HealthRing } from "./simple/health-ring";
 import { StatCard } from "./simple/stat-card";
-import { DependencyFlow } from "./simple/dependency-flow";
 import { CategoryCard, type CategoryStats } from "./simple/category-card";
 import type { HealthSummary, Category } from "@/lib/types";
 
@@ -67,31 +66,6 @@ export function SimpleView({ data, categories }: SimpleViewProps) {
     () => getAllBlastRadii(data.dependencyGraph),
     [data.dependencyGraph],
   );
-
-  // Category-level dependency edges
-  const categoryEdges = useMemo(() => {
-    const edges = new Set<string>();
-    const resultMap = new Map(data.results.map((r) => [r.id, r]));
-
-    for (const [id, node] of Object.entries(data.dependencyGraph)) {
-      const sourceResult = resultMap.get(id);
-      if (!sourceResult) continue;
-
-      for (const depId of node.requiredBy) {
-        const targetResult = resultMap.get(depId);
-        if (!targetResult) continue;
-        if (sourceResult.category === targetResult.category) continue;
-
-        const key = `${sourceResult.category}->${targetResult.category}`;
-        edges.add(key);
-      }
-    }
-
-    return Array.from(edges).map((e) => {
-      const [source, target] = e.split("->") as [Category, Category];
-      return { source, target };
-    });
-  }, [data.dependencyGraph, data.results]);
 
   // Category sparklines (averaged per category)
   const categorySparklines = useMemo(() => {
@@ -222,12 +196,6 @@ export function SimpleView({ data, categories }: SimpleViewProps) {
           tint="neutral"
         />
       </div>
-
-      {/* Dependency Flow Diagram */}
-      <DependencyFlow
-        categoryStats={categoryStats}
-        edges={categoryEdges}
-      />
 
       {/* Category Rows — full-width stacked, expand horizontally */}
       <div className="space-y-3">
