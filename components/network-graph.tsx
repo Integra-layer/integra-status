@@ -127,7 +127,21 @@ export function NetworkGraph({ data, compact = false }: NetworkGraphProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [nodes, setNodes] = useState<SimNode[]>([]);
   const [links, setLinks] = useState<SimLink[]>([]);
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("integra-graph-open");
+      return saved !== null ? saved === "true" : true;
+    }
+    return true;
+  });
+
+  const toggleOpen = useCallback(() => {
+    setIsOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem("integra-graph-open", String(next));
+      return next;
+    });
+  }, []);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [transform, setTransform] = useState<ViewTransform>({
@@ -417,7 +431,7 @@ export function NetworkGraph({ data, compact = false }: NetworkGraphProps) {
       {/* Collapsible header */}
       <button
         type="button"
-        onClick={() => setIsOpen((p) => !p)}
+        onClick={toggleOpen}
         className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors cursor-pointer"
         aria-expanded={isOpen}
       >

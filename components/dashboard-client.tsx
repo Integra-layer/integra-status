@@ -45,7 +45,12 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
   const [activeEnvironment, setActiveEnvironment] = useState<Environment | "all">("all");
-  const [showTimeline, setShowTimeline] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("integra-timeline-open") === "true";
+    }
+    return false;
+  });
   const [scrollProgress, setScrollProgress] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
@@ -259,7 +264,11 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
               <div className="mt-6 rounded-xl border border-border-strong/30 bg-surface-card dark:bg-surface-dark-card overflow-hidden">
                 <button
                   type="button"
-                  onClick={() => setShowTimeline((p) => !p)}
+                  onClick={() => setShowTimeline((p) => {
+                    const next = !p;
+                    localStorage.setItem("integra-timeline-open", String(next));
+                    return next;
+                  })}
                   className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors cursor-pointer"
                 >
                   <h2 className="text-sm font-semibold">Recent Incidents</h2>
