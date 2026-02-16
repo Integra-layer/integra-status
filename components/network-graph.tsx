@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useMemo, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   forceSimulation,
   forceLink,
@@ -134,7 +135,8 @@ export function NetworkGraph({ data, compact = false }: NetworkGraphProps) {
   });
   const simulationRef =
     useRef<ReturnType<typeof forceSimulation<SimNode>> | null>(null);
-  const dragRef = useRef<{ nodeId: string } | null>(null);
+  const router = useRouter();
+  const dragRef = useRef<{ nodeId: string; startCX: number; startCY: number; moved: boolean } | null>(null);
   const panRef = useRef<{
     startX: number;
     startY: number;
@@ -262,7 +264,7 @@ export function NetworkGraph({ data, compact = false }: NetworkGraphProps) {
       e.preventDefault();
       (e.target as Element).setPointerCapture(e.pointerId);
 
-      dragRef.current = { nodeId };
+      dragRef.current = { nodeId, startCX: e.clientX, startCY: e.clientY, moved: false };
 
       const sim = simulationRef.current;
       if (sim) {
@@ -283,6 +285,12 @@ export function NetworkGraph({ data, compact = false }: NetworkGraphProps) {
       if (!svg) return;
 
       if (dragRef.current) {
+        const dx = e.clientX - dragRef.current.startCX;
+        const dy = e.clientY - dragRef.current.startCY;
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+          dragRef.current.moved = true;
+        }
+
         const svgPt = clientToSvg(svg, e.clientX, e.clientY);
         const x = (svgPt.x - transform.x) / transform.k;
         const y = (svgPt.y - transform.y) / transform.k;
@@ -318,11 +326,12 @@ export function NetworkGraph({ data, compact = false }: NetworkGraphProps) {
 
   const handlePointerUp = useCallback(() => {
     if (dragRef.current) {
+      const { nodeId, moved } = dragRef.current;
       const sim = simulationRef.current;
       if (sim) {
         const node = sim
           .nodes()
-          .find((n) => n.id === dragRef.current!.nodeId);
+          .find((n) => n.id === nodeId);
         if (node) {
           node.fx = null;
           node.fy = null;
@@ -330,10 +339,15 @@ export function NetworkGraph({ data, compact = false }: NetworkGraphProps) {
         sim.alphaTarget(0);
       }
       dragRef.current = null;
+
+      // Click (no drag) → navigate to service detail page
+      if (!moved) {
+        router.push(`/service/${nodeId}`);
+      }
       return;
     }
     panRef.current = null;
-  }, []);
+  }, [router]);
 
   // ── Pan on background drag ──
   const handleBgPointerDown = useCallback(
@@ -563,14 +577,8 @@ export function NetworkGraph({ data, compact = false }: NetworkGraphProps) {
                   onPointerDown={(e) => handleNodePointerDown(e, node.id)}
                   onMouseEnter={() => setHoveredId(node.id)}
                   onMouseLeave={() => setHoveredId(null)}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedId((prev) =>
-                      prev === node.id ? null : node.id,
-                    );
-                  }}
                   style={{
-                    cursor: "grab",
+                    cursor: "pointer",
                     transition: "opacity 200ms",
                     opacity: highlighted ? 1 : 0.1,
                   }}
@@ -629,13 +637,25 @@ export function NetworkGraph({ data, compact = false }: NetworkGraphProps) {
                     filter={isActive ? "url(#node-glow)" : undefined}
                   />
 
-                  {/* Category-colored node */}
+                  {/* Node circle — status-colored when DOWN/DEGRADED, category-colored when UP */}
                   <circle
                     cx={nx}
                     cy={ny}
                     r={r}
-                    fill={catC.fill}
-                    stroke={catC.stroke}
+                    fill={
+                      node.status === "DOWN"
+                        ? "#FA3748"
+                        : node.status === "DEGRADED"
+                          ? "#FA7319"
+                          : catC.fill
+                    }
+                    stroke={
+                      node.status === "DOWN"
+                        ? "#D12030"
+                        : node.status === "DEGRADED"
+                          ? "#D45F10"
+                          : catC.stroke
+                    }
                     strokeWidth={isActive ? 2 : 1.5}
                     opacity={0.9}
                   />
@@ -668,25 +688,6 @@ export function NetworkGraph({ data, compact = false }: NetworkGraphProps) {
                     </text>
                   )}
 
-                  {/* Service link on double-click */}
-                  {isActive && (
-                    <a href={`/service/${node.id}`}>
-                      <text
-                        x={nx}
-                        y={ny + r + (compact ? 24 : 28)}
-                        textAnchor="middle"
-                        fontSize={8}
-                        fill="var(--color-brand, #FF6D49)"
-                        className="pointer-events-auto cursor-pointer select-none"
-                        paintOrder="stroke"
-                        stroke="var(--color-surface-card, white)"
-                        strokeWidth={2}
-                        strokeLinejoin="round"
-                      >
-                        View details &rarr;
-                      </text>
-                    </a>
-                  )}
                 </g>
               );
             })}
@@ -741,7 +742,7 @@ export function NetworkGraph({ data, compact = false }: NetworkGraphProps) {
         </span>
         <span className="text-muted-foreground/30 hidden sm:inline">|</span>
         <span className="hidden sm:inline">
-          Drag nodes &middot; Scroll to zoom &middot; Click to focus
+          Drag to move &middot; Scroll to zoom &middot; Click to open
         </span>
       </div>
     </div>
