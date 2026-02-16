@@ -112,22 +112,20 @@ export const CategoryCard = memo(function CategoryCard({
             />
           </div>
 
-          {/* Sparkline (desktop) */}
-          {sparkline.length > 1 && (
-            <div className="hidden md:block flex-shrink-0">
+          {/* Sparkline (desktop) — fixed-width slot so bar stays aligned */}
+          <div className="hidden md:flex w-16 flex-shrink-0 items-center justify-center">
+            {sparkline.length > 1 && (
               <MiniSparkline data={sparkline} width={64} height={18} />
-            </div>
-          )}
-
-          {/* Stats cluster */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {avgResponse > 0 && (
-              <span className="text-xs tabular-nums text-text-muted hidden lg:inline">
-                {avgResponse}ms
-              </span>
             )}
+          </div>
+
+          {/* Stats cluster — fixed widths for alignment */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="hidden lg:inline w-12 text-right text-xs tabular-nums text-text-muted">
+              {avgResponse > 0 ? `${avgResponse}ms` : ""}
+            </span>
             <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium tabular-nums ${
+              className={`w-16 text-center rounded-full px-2 py-0.5 text-xs font-medium tabular-nums ${
                 uptime >= 99
                   ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                   : uptime >= 95
@@ -137,7 +135,7 @@ export const CategoryCard = memo(function CategoryCard({
             >
               {uptime.toFixed(1)}%
             </span>
-            <span className="text-xs font-medium tabular-nums text-text-muted">
+            <span className="w-10 text-right text-xs font-medium tabular-nums text-text-muted">
               {stat.up}/{stat.total}
             </span>
             <ChevronDown
