@@ -363,6 +363,69 @@
   box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
+/* ─── Gradient Border Hover ─── */
+.gradient-border-hover {
+  position: relative;
+}
+.gradient-border-hover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--color-brand-pink-light), var(--color-brand), var(--color-brand-dark));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 300ms ease;
+  pointer-events: none;
+}
+.gradient-border-hover:hover::before {
+  opacity: 1;
+}
+
+/* Status-tinted card backgrounds */
+.card-tint-down {
+  background: linear-gradient(135deg, rgba(239,68,68,0.04) 0%, transparent 60%);
+}
+.card-tint-degraded {
+  background: linear-gradient(135deg, rgba(245,158,11,0.04) 0%, transparent 60%);
+}
+
+/* Category health gradient backgrounds */
+.category-tint-up {
+  background: linear-gradient(90deg, rgba(16,185,129,0.03) 0%, transparent 40%);
+}
+.category-tint-degraded {
+  background: linear-gradient(90deg, rgba(245,158,11,0.03) 0%, transparent 40%);
+}
+.category-tint-down {
+  background: linear-gradient(90deg, rgba(239,68,68,0.03) 0%, transparent 40%);
+}
+
+/* ─── Confetti celebration ─── */
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) translateX(0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100vh) translateX(var(--confetti-drift, 0px)) rotate(720deg);
+  }
+}
+
+/* ─── Page fade-in transition ─── */
+@keyframes page-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-transition {
+  animation: page-fade-in 300ms ease-out;
+}
+
 /* ─── Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

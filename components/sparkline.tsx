@@ -22,7 +22,11 @@ export function Sparkline({
     x: number;
     y: number;
     value: number | null;
+    index?: number;
   } | null>(null);
+
+  // Stable ID for SVG gradient definitions
+  const gradientId = useRef(Math.random().toString(36).slice(2, 8)).current;
 
   // Compute points from data
   const { points, maxVal } = useMemo(() => {
@@ -47,6 +51,38 @@ export function Sparkline({
   }, [data, width, height]);
 
   const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(" ");
+
+  // Area fill polygon: sparkline points + bottom-right + bottom-left
+  const areaPoints = useMemo(() => {
+    if (points.length === 0) return "";
+    const line = points.map((p) => `${p.x},${p.y}`).join(" ");
+    const lastX = points[points.length - 1].x;
+    const firstX = points[0].x;
+    const bottom = height - 2;
+    return `${line} ${lastX},${bottom} ${firstX},${bottom}`;
+  }, [points, height]);
+
+  // Per-point gradient stops for stroke coloring (green→amber→red by response time)
+  const { strokeGradientStops, useGradientStroke } = useMemo(() => {
+    const validValues = data.filter((v): v is number => v !== null);
+    if (validValues.length < 2) return { strokeGradientStops: null, useGradientStroke: false };
+
+    const maxTime = Math.max(...validValues);
+    if (maxTime < 300) return { strokeGradientStops: null, useGradientStroke: false };
+
+    const stops = points.map((p, i) => {
+      const pct = (p.x / (width - 4)) * 100;
+      let color = "var(--color-success)";
+      if (p.value !== null) {
+        const ratio = Math.min(p.value / 1000, 1);
+        if (ratio >= 0.7) color = "var(--color-danger)";
+        else if (ratio >= 0.3) color = "var(--color-warning)";
+      }
+      return <stop key={i} offset={`${pct}%`} stopColor={color} />;
+    });
+
+    return { strokeGradientStops: <>{stops}</>, useGradientStroke: true };
+  }, [data, points, width]);
 
   // Compute stroke color: green for low, gradient to amber for high
   const strokeColor = useMemo(() => {
@@ -84,15 +120,17 @@ export function Sparkline({
     // Find closest point
     let closest = points[0];
     let closestDist = Infinity;
-    for (const p of points) {
-      const dist = Math.abs(p.x - svgX);
+    let closestIdx = 0;
+    for (let i = 0; i < points.length; i++) {
+      const dist = Math.abs(points[i].x - svgX);
       if (dist < closestDist) {
         closestDist = dist;
-        closest = p;
+        closest = points[i];
+        closestIdx = i;
       }
     }
 
-    setTooltip({ x: closest.x, y: closest.y, value: closest.value });
+    setTooltip({ x: closest.x, y: closest.y, value: closest.value, index: closestIdx });
   }
 
   function handleMouseLeave() {
@@ -112,6 +150,18 @@ export function Sparkline({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
+        <defs>
+          {/* Gradient fill below the sparkline */}
+          <linearGradient id={`sparkline-fill-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={strokeColor} stopOpacity={0.25} />
+            <stop offset="100%" stopColor={strokeColor} stopOpacity={0.02} />
+          </linearGradient>
+          {/* Gradient stroke coloring based on response time thresholds */}
+          <linearGradient id={`sparkline-stroke-${gradientId}`} x1="0" y1="0" x2="1" y2="0">
+            {strokeGradientStops}
+          </linearGradient>
+        </defs>
+
         {/* Baseline (zero) */}
         <line
           x1={2}
@@ -123,13 +173,20 @@ export function Sparkline({
           strokeDasharray="2 2"
         />
 
-        {/* Main sparkline */}
+        {/* Area fill under the sparkline */}
+        <polygon
+          points={areaPoints}
+          fill={`url(#sparkline-fill-${gradientId})`}
+          opacity={0.8}
+        />
+
+        {/* Main sparkline with gradient stroke */}
         <polyline
           ref={pathRef}
           className="sparkline-path"
           points={polylinePoints}
           fill="none"
-          stroke={strokeColor}
+          stroke={useGradientStroke ? `url(#sparkline-stroke-${gradientId})` : strokeColor}
           strokeWidth={1.5}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -146,28 +203,44 @@ export function Sparkline({
           }
         />
 
+        {/* Hover crosshair line */}
+        {tooltip && (
+          <line
+            x1={tooltip.x}
+            y1={2}
+            x2={tooltip.x}
+            y2={height - 2}
+            stroke="var(--color-text-subtle)"
+            strokeWidth={0.5}
+            strokeDasharray="2 2"
+          />
+        )}
+
         {/* Hover indicator */}
         {tooltip && (
-          <>
-            <circle
-              cx={tooltip.x}
-              cy={tooltip.y}
-              r={3}
-              fill={strokeColor}
-              stroke="white"
-              strokeWidth={1.5}
-            />
-          </>
+          <circle
+            cx={tooltip.x}
+            cy={tooltip.y}
+            r={3}
+            fill={strokeColor}
+            stroke="white"
+            strokeWidth={1.5}
+          />
         )}
       </svg>
 
-      {/* Floating tooltip pill */}
+      {/* Floating tooltip pill with value + index */}
       {tooltip && tooltip.value !== null && (
         <div
           className="pointer-events-none absolute -top-8 z-50 -translate-x-1/2 whitespace-nowrap rounded-full bg-gray-900 px-2 py-0.5 text-xs font-medium text-white shadow-md dark:bg-gray-100 dark:text-gray-900"
           style={{ left: `${(tooltip.x / width) * 100}%` }}
         >
           {tooltip.value}ms
+          {tooltip.index !== undefined && (
+            <span className="ml-1 opacity-60">
+              #{tooltip.index + 1}
+            </span>
+          )}
         </div>
       )}
     </div>

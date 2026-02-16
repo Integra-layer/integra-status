@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { EndpointCard } from "@/components/endpoint-card";
+import { ProgressRing } from "@/components/progress-ring";
 import type { CheckResult } from "@/lib/types";
 
 type CategorySectionProps = {
@@ -12,6 +13,11 @@ type CategorySectionProps = {
   sparklines: Record<string, (number | null)[]>;
   uptimes: Record<string, number>;
   defaultOpen?: boolean;
+  blastRadii?: Record<string, number>;
+  impactMap?: Record<string, Array<{ id: string; name: string }>>;
+  dependencyGraph?: Record<string, { dependsOn: string[]; requiredBy: string[] }>;
+  allResults?: CheckResult[];
+  flashClasses?: Record<string, string>;
 };
 
 function getWorstStatus(results: CheckResult[]): "UP" | "DEGRADED" | "DOWN" {
@@ -26,6 +32,12 @@ const BORDER_COLOR = {
   DOWN: "border-l-red-500",
 } as const;
 
+const SEGMENT_COLOR = {
+  UP: "bg-emerald-500",
+  DEGRADED: "bg-amber-500",
+  DOWN: "bg-red-500",
+} as const;
+
 export function CategorySection({
   name,
   icon,
@@ -33,6 +45,11 @@ export function CategorySection({
   sparklines,
   uptimes,
   defaultOpen,
+  blastRadii,
+  impactMap,
+  dependencyGraph,
+  allResults,
+  flashClasses,
 }: CategorySectionProps) {
   const hasDown = results.some((r) => r.status === "DOWN");
   const [isOpen, setIsOpen] = useState(defaultOpen ?? hasDown);
@@ -43,7 +60,9 @@ export function CategorySection({
   const borderColor = BORDER_COLOR[worstStatus];
 
   return (
-    <div className={`border-l-4 ${borderColor} rounded-lg bg-card`}>
+    <div id={`category-${name.toLowerCase()}`} className={`border-l-4 ${borderColor} rounded-lg bg-card ${
+      worstStatus === "DOWN" ? "category-tint-down" : worstStatus === "DEGRADED" ? "category-tint-degraded" : "category-tint-up"
+    }`}>
       {/* Clickable header */}
       <button
         type="button"
@@ -61,6 +80,18 @@ export function CategorySection({
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Status segments bar */}
+          <div className="hidden sm:flex items-center gap-0.5" aria-label={`${upCount} of ${totalCount} operational`}>
+            {results.map((r) => (
+              <span
+                key={r.id}
+                className={`inline-block h-2 w-3 rounded-sm ${SEGMENT_COLOR[r.status]}`}
+                title={`${r.name}: ${r.status}`}
+              />
+            ))}
+          </div>
+
+          <ProgressRing value={(upCount / totalCount) * 100} size={28} strokeWidth={2.5} />
           <span className="text-sm text-muted-foreground">
             {upCount}/{totalCount} operational
           </span>
@@ -92,6 +123,11 @@ export function CategorySection({
                 sparklineData={sparklines[result.id]}
                 uptime={uptimes[result.id]}
                 index={i}
+                blastRadius={blastRadii?.[result.id]}
+                impactedServices={impactMap?.[result.id]}
+                dependencyGraph={dependencyGraph}
+                allResults={allResults}
+                flashClass={flashClasses?.[result.id]}
               />
             ))}
           </div>

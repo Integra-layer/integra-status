@@ -17,6 +17,7 @@ import { EndpointLinks } from "@/components/endpoint-links";
 import { TroubleshootingHint } from "@/components/troubleshooting-hint";
 import { DependencyGraph } from "@/components/dependency-graph";
 import { IncidentTimeline } from "@/components/incident-timeline";
+import { UptimeBar } from "@/components/uptime-bar";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 30;
@@ -71,11 +72,14 @@ export default async function ServiceDetailPage({
   const dependsOn = node?.dependsOn ?? [];
   const requiredBy = node?.requiredBy ?? [];
 
+  // Build uptime bar buckets from sparkline data (true = responded, false = timeout/null)
+  const uptimeBuckets = sparkData.map((v) => (v === null ? null : v > 0));
+
   // Filter incidents for this endpoint
   const endpointIncidents = incidents.filter((inc) => inc.id === id);
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-surface page-transition">
       <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
         {/* Back button */}
         <Link
@@ -169,6 +173,14 @@ export default async function ServiceDetailPage({
           </div>
         </div>
 
+        {/* Uptime history bar */}
+        {uptimeBuckets.length > 0 && (
+          <div className="rounded-xl border border-border-strong/30 bg-surface-card p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-4">Uptime History</h2>
+            <UptimeBar buckets={uptimeBuckets} />
+          </div>
+        )}
+
         {/* Links */}
         <div className="rounded-xl border border-border-strong/30 bg-surface-card p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">Direct Links</h2>
@@ -195,6 +207,7 @@ export default async function ServiceDetailPage({
               dependsOn={dependsOn}
               requiredBy={requiredBy}
               results={results}
+              dependencyGraph={depGraph}
             />
           </div>
         )}

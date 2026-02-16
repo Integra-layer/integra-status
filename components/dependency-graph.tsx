@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import Link from "next/link";
+import { useMemo, useState } from "react";
+import { getBlastRadius } from "@/lib/graph-utils";
 import type { CheckResult, Status } from "@/lib/types";
 
 type DependencyGraphProps = {
@@ -9,19 +9,20 @@ type DependencyGraphProps = {
   dependsOn: string[];
   requiredBy: string[];
   results: CheckResult[];
+  dependencyGraph?: Record<string, { dependsOn: string[]; requiredBy: string[] }>;
 };
 
-const STATUS_COLORS: Record<Status, { fill: string; stroke: string }> = {
-  UP: { fill: "#d1fae5", stroke: "#10b981" },
-  DEGRADED: { fill: "#fef3c7", stroke: "#f59e0b" },
-  DOWN: { fill: "#fee2e2", stroke: "#ef4444" },
+const STATUS_COLORS: Record<Status, { fill: string; stroke: string; glow: string }> = {
+  UP: { fill: "#d1fae5", stroke: "#10b981", glow: "rgba(16,185,129,0.3)" },
+  DEGRADED: { fill: "#fef3c7", stroke: "#f59e0b", glow: "rgba(245,158,11,0.3)" },
+  DOWN: { fill: "#fee2e2", stroke: "#ef4444", glow: "rgba(239,68,68,0.3)" },
 };
 
-const NODE_WIDTH = 140;
-const NODE_HEIGHT = 36;
-const COL_GAP = 180;
-const ROW_GAP = 52;
-const PADDING = 20;
+const NODE_WIDTH = 150;
+const NODE_HEIGHT = 40;
+const COL_GAP = 200;
+const ROW_GAP = 56;
+const PADDING = 24;
 
 type GraphNode = {
   id: string;
@@ -31,6 +32,7 @@ type GraphNode = {
   row: number;
   x: number;
   y: number;
+  blastRadius: number;
 };
 
 export function DependencyGraph({
@@ -38,16 +40,19 @@ export function DependencyGraph({
   dependsOn,
   requiredBy,
   results,
+  dependencyGraph,
 }: DependencyGraphProps) {
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
   const { nodes, edges, viewBox } = useMemo(() => {
     const resultMap = new Map(results.map((r) => [r.id, r]));
 
-    // Build nodes in 3 columns: left (dependsOn), center (current), right (requiredBy)
     const graphNodes: GraphNode[] = [];
 
     // Left column: upstream dependencies
     dependsOn.forEach((depId, i) => {
       const r = resultMap.get(depId);
+      const br = dependencyGraph ? getBlastRadius(depId, dependencyGraph).length : 0;
       graphNodes.push({
         id: depId,
         name: r?.name ?? depId,
@@ -56,14 +61,15 @@ export function DependencyGraph({
         row: i,
         x: PADDING,
         y: PADDING + i * ROW_GAP,
+        blastRadius: br,
       });
     });
 
     // Center column: current node
     const currentResult = resultMap.get(currentId);
     const centerRow = Math.max(dependsOn.length, requiredBy.length, 1);
-    const centerY =
-      PADDING + ((centerRow - 1) * ROW_GAP) / 2;
+    const centerY = PADDING + ((centerRow - 1) * ROW_GAP) / 2;
+    const currentBr = dependencyGraph ? getBlastRadius(currentId, dependencyGraph).length : 0;
     graphNodes.push({
       id: currentId,
       name: currentResult?.name ?? currentId,
@@ -72,11 +78,13 @@ export function DependencyGraph({
       row: 0,
       x: PADDING + COL_GAP,
       y: centerY,
+      blastRadius: currentBr,
     });
 
     // Right column: downstream dependents
     requiredBy.forEach((depId, i) => {
       const r = resultMap.get(depId);
+      const br = dependencyGraph ? getBlastRadius(depId, dependencyGraph).length : 0;
       graphNodes.push({
         id: depId,
         name: r?.name ?? depId,
@@ -85,46 +93,51 @@ export function DependencyGraph({
         row: i,
         x: PADDING + COL_GAP * 2,
         y: PADDING + i * ROW_GAP,
+        blastRadius: br,
       });
     });
 
-    // Build edges
+    // Build bezier curve edges
     const graphEdges: Array<{
       fromX: number;
       fromY: number;
       toX: number;
       toY: number;
+      path: string;
     }> = [];
 
     const centerNode = graphNodes.find((n) => n.id === currentId)!;
 
-    // Edges from dependsOn -> current
     for (const depId of dependsOn) {
       const depNode = graphNodes.find((n) => n.id === depId);
       if (depNode) {
+        const sx = depNode.x + NODE_WIDTH;
+        const sy = depNode.y + NODE_HEIGHT / 2;
+        const ex = centerNode.x;
+        const ey = centerNode.y + NODE_HEIGHT / 2;
+        const cpx = sx + (ex - sx) * 0.5;
         graphEdges.push({
-          fromX: depNode.x + NODE_WIDTH,
-          fromY: depNode.y + NODE_HEIGHT / 2,
-          toX: centerNode.x,
-          toY: centerNode.y + NODE_HEIGHT / 2,
+          fromX: sx, fromY: sy, toX: ex, toY: ey,
+          path: `M ${sx} ${sy} C ${cpx} ${sy}, ${cpx} ${ey}, ${ex} ${ey}`,
         });
       }
     }
 
-    // Edges from current -> requiredBy
     for (const depId of requiredBy) {
       const depNode = graphNodes.find((n) => n.id === depId);
       if (depNode) {
+        const sx = centerNode.x + NODE_WIDTH;
+        const sy = centerNode.y + NODE_HEIGHT / 2;
+        const ex = depNode.x;
+        const ey = depNode.y + NODE_HEIGHT / 2;
+        const cpx = sx + (ex - sx) * 0.5;
         graphEdges.push({
-          fromX: centerNode.x + NODE_WIDTH,
-          fromY: centerNode.y + NODE_HEIGHT / 2,
-          toX: depNode.x,
-          toY: depNode.y + NODE_HEIGHT / 2,
+          fromX: sx, fromY: sy, toX: ex, toY: ey,
+          path: `M ${sx} ${sy} C ${cpx} ${sy}, ${cpx} ${ey}, ${ex} ${ey}`,
         });
       }
     }
 
-    // Compute viewBox
     const maxX =
       PADDING * 2 +
       COL_GAP * (requiredBy.length > 0 ? 2 : dependsOn.length > 0 ? 1 : 0) +
@@ -137,7 +150,7 @@ export function DependencyGraph({
       edges: graphEdges,
       viewBox: `0 0 ${maxX} ${maxY}`,
     };
-  }, [currentId, dependsOn, requiredBy, results]);
+  }, [currentId, dependsOn, requiredBy, results, dependencyGraph]);
 
   if (nodes.length <= 1) {
     return (
@@ -147,12 +160,25 @@ export function DependencyGraph({
     );
   }
 
+  // Check if a node is connected to hovered
+  function isHighlighted(nodeId: string): boolean {
+    if (!hoveredId) return true;
+    if (nodeId === hoveredId) return true;
+    // Check if there's an edge between them
+    return edges.some(
+      (e) =>
+        (nodes.find((n) => n.x === e.fromX - NODE_WIDTH || n.x === e.fromX)?.id === hoveredId &&
+          nodes.find((n) => n.x === e.toX)?.id === nodeId) ||
+        (nodes.find((n) => n.x === e.toX)?.id === hoveredId &&
+          nodes.find((n) => n.x === e.fromX - NODE_WIDTH || n.x === e.fromX)?.id === nodeId),
+    );
+  }
+
   return (
     <div className="overflow-x-auto">
-      {/* Column labels */}
       <div className="flex justify-between mb-2 px-1 text-xs text-text-muted">
         {dependsOn.length > 0 && <span>Depends on</span>}
-        <span className={dependsOn.length === 0 ? "" : ""}>&nbsp;</span>
+        <span>&nbsp;</span>
         {requiredBy.length > 0 && <span>Required by</span>}
       </div>
 
@@ -165,7 +191,7 @@ export function DependencyGraph({
       >
         <defs>
           <marker
-            id="arrowhead"
+            id="arrowhead-dep"
             markerWidth="8"
             markerHeight="6"
             refX="8"
@@ -179,40 +205,49 @@ export function DependencyGraph({
           </marker>
         </defs>
 
-        {/* Edges with animated dash */}
-        {edges.map((edge, i) => {
-          const dx = edge.toX - edge.fromX;
-          const dy = edge.toY - edge.fromY;
-          const len = Math.sqrt(dx * dx + dy * dy);
-
-          return (
-            <line
-              key={i}
-              x1={edge.fromX}
-              y1={edge.fromY}
-              x2={edge.toX}
-              y2={edge.toY}
-              stroke="var(--color-text-muted, #9ca3af)"
-              strokeWidth={1.5}
-              strokeDasharray={len}
-              strokeDashoffset={len}
-              markerEnd="url(#arrowhead)"
-              opacity={0.6}
-              style={{
-                animation: `dep-edge-draw 600ms ease-out ${i * 100}ms forwards`,
-              }}
-            />
-          );
-        })}
+        {/* Bezier curve edges with marching ants animation */}
+        {edges.map((edge, i) => (
+          <path
+            key={i}
+            d={edge.path}
+            fill="none"
+            stroke="var(--color-text-muted, #9ca3af)"
+            strokeWidth={1.5}
+            markerEnd="url(#arrowhead-dep)"
+            opacity={0.6}
+            strokeDasharray="6 3"
+            className="animate-marching-ants"
+          />
+        ))}
 
         {/* Nodes */}
         {nodes.map((node) => {
           const colors = STATUS_COLORS[node.status];
           const isCurrent = node.id === currentId;
+          const isHover = hoveredId === node.id;
 
           return (
-            <g key={node.id}>
+            <g
+              key={node.id}
+              onMouseEnter={() => setHoveredId(node.id)}
+              onMouseLeave={() => setHoveredId(null)}
+              style={{ cursor: "pointer" }}
+            >
               <a href={`/service/${node.id}`} aria-label={`${node.name} — ${node.status}`}>
+                {/* Glow effect */}
+                {(isCurrent || isHover) && (
+                  <rect
+                    x={node.x - 3}
+                    y={node.y - 3}
+                    width={NODE_WIDTH + 6}
+                    height={NODE_HEIGHT + 6}
+                    rx={11}
+                    fill="none"
+                    stroke={colors.stroke}
+                    strokeWidth={2}
+                    opacity={0.25}
+                  />
+                )}
                 <rect
                   x={node.x}
                   y={node.y}
@@ -244,18 +279,43 @@ export function DependencyGraph({
                     ? node.name.slice(0, 13) + "\u2026"
                     : node.name}
                 </text>
+                {/* Blast radius badge */}
+                {node.blastRadius > 0 && (
+                  <>
+                    <circle
+                      cx={node.x + NODE_WIDTH - 14}
+                      cy={node.y + 10}
+                      r={8}
+                      fill={colors.stroke}
+                      opacity={0.2}
+                    />
+                    <text
+                      x={node.x + NODE_WIDTH - 14}
+                      y={node.y + 11}
+                      fontSize={8}
+                      fontWeight="bold"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fill={colors.stroke}
+                    >
+                      {node.blastRadius}
+                    </text>
+                  </>
+                )}
               </a>
             </g>
           );
         })}
       </svg>
 
-      {/* CSS animation for edge drawing */}
       <style jsx>{`
-        @keyframes dep-edge-draw {
+        @keyframes marching-ants {
           to {
-            stroke-dashoffset: 0;
+            stroke-dashoffset: -18;
           }
+        }
+        .animate-marching-ants {
+          animation: marching-ants 1s linear infinite;
         }
       `}</style>
     </div>

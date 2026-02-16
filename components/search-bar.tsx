@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import type { Environment } from "@/lib/types";
 
 type SearchBarProps = {
   endpointCount: number;
@@ -11,11 +12,21 @@ type SearchBarProps = {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onCategoryToggle: (category: string) => void;
+  activeEnvironment?: Environment | "all";
+  onEnvironmentChange?: (env: Environment | "all") => void;
 };
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+const ENVIRONMENTS: Array<{ key: Environment | "all"; label: string }> = [
+  { key: "all", label: "All" },
+  { key: "prod", label: "Production" },
+  { key: "dev", label: "Development" },
+  { key: "staging", label: "Staging" },
+  { key: "release", label: "Release" },
+];
 
 export function SearchBar({
   endpointCount,
@@ -24,17 +35,17 @@ export function SearchBar({
   searchQuery,
   onSearchChange,
   onCategoryToggle,
+  activeEnvironment = "all",
+  onEnvironmentChange,
 }: SearchBarProps) {
   const [localQuery, setLocalQuery] = useState(searchQuery);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync local state when parent resets the query (e.g. Escape clears it)
   useEffect(() => {
     setLocalQuery(searchQuery);
   }, [searchQuery]);
 
-  // Debounced propagation to parent
   const debouncedChange = useCallback(
     (value: string) => {
       if (debounceRef.current) {
@@ -44,10 +55,9 @@ export function SearchBar({
         onSearchChange(value);
       }, 200);
     },
-    [onSearchChange]
+    [onSearchChange],
   );
 
-  // Clean up debounce timer on unmount
   useEffect(() => {
     return () => {
       if (debounceRef.current) {
@@ -56,13 +66,12 @@ export function SearchBar({
     };
   }, []);
 
-  // Keyboard shortcuts: "/" to focus, "Escape" to clear + blur
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (
         e.key === "/" &&
         !["INPUT", "TEXTAREA", "SELECT"].includes(
-          (e.target as HTMLElement).tagName
+          (e.target as HTMLElement).tagName,
         )
       ) {
         e.preventDefault();
@@ -89,6 +98,32 @@ export function SearchBar({
 
   return (
     <div className="w-full space-y-3">
+      {/* Environment filter tabs */}
+      {onEnvironmentChange && (
+        <div
+          className="flex items-center gap-0.5 rounded-lg bg-muted/50 p-1 w-fit"
+          role="tablist"
+          aria-label="Filter by environment"
+        >
+          {ENVIRONMENTS.map((env) => (
+            <button
+              key={env.key}
+              type="button"
+              role="tab"
+              aria-selected={activeEnvironment === env.key}
+              onClick={() => onEnvironmentChange(env.key)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-200 cursor-pointer ${
+                activeEnvironment === env.key
+                  ? "bg-white dark:bg-neutral-800 text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {env.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Search input */}
       <div className="group relative">
         <label htmlFor="endpoint-search" className="sr-only">
@@ -107,7 +142,6 @@ export function SearchBar({
           placeholder={`Search ${endpointCount} endpoints...`}
           className="pl-10 pr-4 h-11 bg-surface-card dark:bg-surface-dark-card border-border-strong/30 dark:border-border-dark-strong/30 rounded-lg text-sm focus-visible:ring-brand/30 focus-visible:border-brand transition-all duration-200"
         />
-        {/* Brand gradient bottom border on focus */}
         <div
           className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-lg opacity-0 group-focus-within:opacity-100 transition-opacity duration-300"
           style={{
@@ -116,7 +150,6 @@ export function SearchBar({
           }}
           aria-hidden="true"
         />
-        {/* Keyboard hint */}
         {!localQuery && (
           <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-1 rounded border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 text-[10px] font-mono text-text-muted dark:text-text-light-muted">
             /
@@ -126,7 +159,11 @@ export function SearchBar({
 
       {/* Category filter chips */}
       {categories.length > 0 && (
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by category">
+        <div
+          className="flex flex-wrap gap-2"
+          role="group"
+          aria-label="Filter by category"
+        >
           {categories.map((category) => {
             const isActive = activeCategories.includes(category);
             return (
