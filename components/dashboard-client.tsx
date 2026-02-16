@@ -11,6 +11,7 @@ import { SimpleView } from "@/components/simple-view";
 import { CategorySection } from "@/components/category-section";
 import { IncidentTimeline } from "@/components/incident-timeline";
 import { Footer } from "@/components/footer";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { getAllBlastRadii } from "@/lib/graph-utils";
 import { capitalize } from "@/lib/utils";
 
@@ -190,6 +191,14 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
       <Header lastChecked={data.timestamp} endpointCount={data.total} />
       <SummaryBar up={data.up} degraded={data.degraded} down={data.down} />
 
+      {/* Screen reader announcement for critical alerts */}
+      {data.down > 0 && (
+        <div aria-live="assertive" className="sr-only">
+          {data.down} service{data.down !== 1 ? "s" : ""} currently down.
+        </div>
+      )}
+
+      <ErrorBoundary>
       <main id="main" className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <div className="mb-6">
           <SearchBar
@@ -237,7 +246,7 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
               ))}
 
               {categoryResults.length === 0 && (
-                <div className="rounded-lg border border-border-strong/30 bg-surface-card p-8 text-center">
+                <div className="rounded-xl border border-border-strong/30 bg-surface-card p-8 text-center">
                   <p className="text-sm text-text-muted">
                     No endpoints match your search.
                   </p>
@@ -273,6 +282,7 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
           </>
         )}
       </main>
+      </ErrorBoundary>
 
       <Footer endpointCount={data.total} categoryCount={categories.length} />
     </div>

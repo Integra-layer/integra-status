@@ -90,7 +90,7 @@ export function EndpointCard({
                 <StatusBadge status={result.status} />
                 {blastRadius > 0 && (
                   <span
-                    className="inline-flex items-center gap-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700 dark:text-orange-300"
+                    className="inline-flex items-center gap-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 text-xs font-semibold text-orange-700 dark:text-orange-300"
                     title={`${blastRadius} downstream service${blastRadius !== 1 ? "s" : ""} affected if this goes down`}
                   >
                     <Zap className="h-3 w-3" />
@@ -105,7 +105,7 @@ export function EndpointCard({
                 </p>
               )}
               {result.owner && (
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 text-xs text-muted-foreground">
                   <span aria-hidden="true">👤</span>{" "}
                   {result.owner.name}
                   {result.owner.telegram && (

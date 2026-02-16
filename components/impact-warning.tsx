@@ -25,7 +25,7 @@ export function ImpactWarning({
 
   return (
     <div
-      className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800/50 p-3"
+      className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800/50 p-3"
       role="alert"
     >
       <div className="flex items-start gap-2">
@@ -40,13 +40,13 @@ export function ImpactWarning({
                 key={svc.id}
                 href={`/service/${svc.id}`}
                 onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-2 py-0.5 text-[11px] font-medium text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                className="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
               >
                 {svc.name}
               </Link>
             ))}
             {impactedServices.length > 5 && (
-              <span className="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-2 py-0.5 text-[11px] text-red-600 dark:text-red-400">
+              <span className="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-2 py-0.5 text-xs text-red-600 dark:text-red-400">
                 +{impactedServices.length - 5} more
               </span>
             )}
@@ -60,7 +60,7 @@ export function ImpactWarning({
               e.stopPropagation();
               setShowTree((prev) => !prev);
             }}
-            className="mt-2 inline-flex items-center gap-1 text-[11px] text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 transition-colors cursor-pointer"
+            className="mt-2 inline-flex items-center gap-1 text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 transition-colors cursor-pointer"
           >
             <ChevronDown
               className={`h-3 w-3 transition-transform duration-200 ${showTree ? "rotate-180" : ""}`}

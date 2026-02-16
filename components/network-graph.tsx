@@ -239,7 +239,7 @@ export function NetworkGraph({ data }: NetworkGraphProps) {
           </svg>
 
           {/* Legend */}
-          <div className="flex items-center justify-center gap-4 px-4 py-2 text-[10px] text-muted-foreground">
+          <div className="flex items-center justify-center gap-4 px-4 py-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" /> UP
             </span>

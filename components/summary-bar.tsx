@@ -125,7 +125,7 @@ export function SummaryBar({ up, degraded, down }: SummaryBarProps) {
             {CARDS.map((card) => (
               <div
                 key={card.key}
-                className={`relative rounded-lg border border-border-strong/20 bg-surface-card dark:bg-surface-dark-card p-3 border-t-[3px] ${card.accent} text-center`}
+                className={`relative rounded-xl border border-border-strong/20 bg-surface-card dark:bg-surface-dark-card p-3 border-t-[3px] ${card.accent} text-center`}
               >
                 <div className="flex items-center justify-center gap-2 mb-1">
                   {card.key !== "total" && (

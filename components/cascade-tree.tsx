@@ -31,7 +31,7 @@ function TreeNode({ node, isLast }: { node: CascadeNode; isLast: boolean }) {
     <div>
       <div className="flex items-center gap-1.5">
         {node.depth > 0 && (
-          <span className="font-mono text-[11px] text-muted-foreground select-none">
+          <span className="font-mono text-xs text-muted-foreground select-none">
             {"\u00A0".repeat((node.depth - 1) * 3)}{connector}
           </span>
         )}
@@ -42,12 +42,12 @@ function TreeNode({ node, isLast }: { node: CascadeNode; isLast: boolean }) {
         <Link
           href={`/service/${node.id}`}
           onClick={(e) => e.stopPropagation()}
-          className={`text-[11px] font-medium ${textColor} hover:underline`}
+          className={`text-xs font-medium ${textColor} hover:underline`}
         >
           {node.name}
         </Link>
         {node.depth > 0 && (
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             L{node.depth}
           </span>
         )}
@@ -72,7 +72,7 @@ export function CascadeTree({
 
   if (tree.children.length === 0) {
     return (
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         No downstream dependencies.
       </p>
     );

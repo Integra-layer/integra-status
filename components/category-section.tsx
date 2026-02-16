@@ -60,7 +60,7 @@ export function CategorySection({
   const borderColor = BORDER_COLOR[worstStatus];
 
   return (
-    <div id={`category-${name.toLowerCase()}`} className={`border-l-4 ${borderColor} rounded-lg bg-card ${
+    <div id={`category-${name.toLowerCase()}`} className={`border-l-4 ${borderColor} rounded-xl bg-card ${
       worstStatus === "DOWN" ? "category-tint-down" : worstStatus === "DEGRADED" ? "category-tint-degraded" : "category-tint-up"
     }`}>
       {/* Clickable header */}
@@ -68,7 +68,7 @@ export function CategorySection({
         type="button"
         id={`category-${name.toLowerCase()}-btn`}
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-muted/50 rounded-r-lg cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-none"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-muted/50 rounded-r-xl cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-none"
         aria-expanded={isOpen}
         aria-controls={`category-${name.toLowerCase()}-content`}
       >

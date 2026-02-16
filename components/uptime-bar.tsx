@@ -43,8 +43,8 @@ export function UptimeBar({ buckets, className = "" }: UptimeBarProps) {
         ))}
       </div>
       <div className="flex items-center justify-between mt-1">
-        <span className="text-[10px] text-muted-foreground">{buckets.length} checks ago</span>
-        <span className="text-[10px] text-muted-foreground">Now</span>
+        <span className="text-xs text-muted-foreground">{buckets.length} checks ago</span>
+        <span className="text-xs text-muted-foreground">Now</span>
       </div>
     </div>
   );

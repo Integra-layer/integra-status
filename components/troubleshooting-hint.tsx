@@ -29,7 +29,7 @@ export function TroubleshootingHint({
 
   return (
     <div
-      className={`rounded-lg p-4 ${containerClass}`}
+      className={`rounded-xl p-4 ${containerClass}`}
       role={isDown ? "alert" : "status"}
     >
       <h4 className={`mb-2 text-sm font-semibold ${headerClass}`}>
