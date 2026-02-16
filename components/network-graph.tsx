@@ -16,6 +16,7 @@ import {
   ZoomOut,
   Maximize2,
   RotateCcw,
+  ChevronDown,
   Blocks,
   Shield,
   Server,
@@ -126,6 +127,7 @@ export function NetworkGraph({ data, compact = false }: NetworkGraphProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [nodes, setNodes] = useState<SimNode[]>([]);
   const [links, setLinks] = useState<SimLink[]>([]);
+  const [isOpen, setIsOpen] = useState(true);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [transform, setTransform] = useState<ViewTransform>({
@@ -412,52 +414,64 @@ export function NetworkGraph({ data, compact = false }: NetworkGraphProps) {
 
   return (
     <div className="rounded-xl border border-border-strong/30 bg-surface-card dark:bg-surface-dark-card overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border-strong/20">
+      {/* Collapsible header */}
+      <button
+        type="button"
+        onClick={() => setIsOpen((p) => !p)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors cursor-pointer"
+        aria-expanded={isOpen}
+      >
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-semibold">Dependency Network</h2>
           <span className="text-xs text-muted-foreground rounded-full bg-muted px-2 py-0.5 tabular-nums">
             {rawNodes.length} nodes &middot; {rawEdges.length} edges
           </span>
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={zoomIn}
-            className={controlBtnClass}
-            title="Zoom in"
-            aria-label="Zoom in"
-          >
-            <ZoomIn className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={zoomOut}
-            className={controlBtnClass}
-            title="Zoom out"
-            aria-label="Zoom out"
-          >
-            <ZoomOut className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={fitView}
-            className={controlBtnClass}
-            title="Fit to view"
-            aria-label="Fit to view"
-          >
-            <Maximize2 className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={resetView}
-            className={controlBtnClass}
-            title="Reset view"
-            aria-label="Reset view"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {isOpen && (
+        <>
+      {/* Controls */}
+      <div className="flex items-center justify-end gap-1 px-4 py-1.5 border-t border-border-strong/20">
+        <button
+          type="button"
+          onClick={zoomIn}
+          className={controlBtnClass}
+          title="Zoom in"
+          aria-label="Zoom in"
+        >
+          <ZoomIn className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={zoomOut}
+          className={controlBtnClass}
+          title="Zoom out"
+          aria-label="Zoom out"
+        >
+          <ZoomOut className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={fitView}
+          className={controlBtnClass}
+          title="Fit to view"
+          aria-label="Fit to view"
+        >
+          <Maximize2 className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={resetView}
+          className={controlBtnClass}
+          title="Reset view"
+          aria-label="Reset view"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+        </button>
       </div>
 
       {/* Graph canvas */}
@@ -745,6 +759,8 @@ export function NetworkGraph({ data, compact = false }: NetworkGraphProps) {
           Drag to move &middot; Scroll to zoom &middot; Click to open
         </span>
       </div>
+        </>
+      )}
     </div>
   );
 }
