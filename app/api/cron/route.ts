@@ -31,7 +31,7 @@ const CRON_SECRET = process.env.CRON_SECRET ?? "";
 type StoredStatus = {
   status: string;
   at: number;
-  consecutiveUp: number;
+  consecutive: number; // consecutive checks showing a DIFFERENT status than stored
 };
 
 export async function GET(request: Request) {
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
       const key = `status:${r.id}`;
       const prev = await kv.get<StoredStatus>(key);
       const prevStatus = prev?.status ?? "UP";
-      const consecutiveUp = prev?.consecutiveUp ?? 0;
+      const consecutive = prev?.consecutive ?? 0;
 
       if (prevStatus !== r.status) {
         // Check flap protection: >3 transitions in 5min -> suppress
@@ -68,28 +68,8 @@ export async function GET(request: Request) {
         const flapCount = (await kv.get<number>(flapKey)) ?? 0;
 
         if (flapCount < 3) {
-          // Recovery delay: only send recovery after 2 consecutive UP checks
-          if (r.status === "UP") {
-            if (consecutiveUp + 1 >= 2) {
-              transitions.push({
-                result: r,
-                fromStatus: prevStatus,
-                toStatus: r.status,
-              });
-              await kv.set(key, {
-                status: r.status,
-                at: Date.now(),
-                consecutiveUp: 0,
-              });
-            } else {
-              await kv.set(key, {
-                status: prevStatus,
-                at: prev?.at ?? Date.now(),
-                consecutiveUp: consecutiveUp + 1,
-              });
-              continue;
-            }
-          } else {
+          // Require 2 consecutive checks showing the new status before alerting
+          if (consecutive + 1 >= 2) {
             transitions.push({
               result: r,
               fromStatus: prevStatus,
@@ -98,27 +78,32 @@ export async function GET(request: Request) {
             await kv.set(key, {
               status: r.status,
               at: Date.now(),
-              consecutiveUp: 0,
+              consecutive: 0,
+            });
+            // Increment flap counter (TTL 5 min)
+            await kv.set(flapKey, flapCount + 1, { ex: 300 });
+          } else {
+            // First check showing new status — wait for confirmation
+            await kv.set(key, {
+              status: prevStatus,
+              at: prev?.at ?? Date.now(),
+              consecutive: consecutive + 1,
             });
           }
-
-          // Increment flap counter (TTL 5 min)
-          await kv.set(flapKey, flapCount + 1, { ex: 300 });
         } else {
           // Flapping — suppress alerts, still update status
           await kv.set(key, {
             status: r.status,
             at: Date.now(),
-            consecutiveUp: 0,
+            consecutive: 0,
           });
         }
       } else {
-        // Same status — update consecutive UP counter
-        const newConsecutive = r.status === "UP" ? consecutiveUp + 1 : 0;
+        // Same status — reset consecutive counter
         await kv.set(key, {
           status: r.status,
           at: prev?.at ?? Date.now(),
-          consecutiveUp: newConsecutive,
+          consecutive: 0,
         });
       }
     }
