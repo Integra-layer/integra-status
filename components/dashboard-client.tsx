@@ -168,6 +168,15 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
     return sorted.slice(0, 10);
   }, [data.history.incidents]);
 
+  // Endpoint ID → name map for incident timeline
+  const endpointNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const r of data.results) {
+      map[r.id] = r.name;
+    }
+    return map;
+  }, [data.results]);
+
   const allUp = data.down === 0 && data.degraded === 0;
 
   return (
@@ -263,7 +272,7 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
                 </button>
                 {showTimeline && (
                   <div className="border-t border-border-strong/20 p-4">
-                    <IncidentTimeline incidents={recentIncidents} />
+                    <IncidentTimeline incidents={recentIncidents} endpointNames={endpointNames} />
                   </div>
                 )}
               </div>

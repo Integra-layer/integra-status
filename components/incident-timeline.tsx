@@ -11,6 +11,7 @@ type Incident = {
 
 type IncidentTimelineProps = {
   incidents: Incident[];
+  endpointNames?: Record<string, string>;
 };
 
 const STATUS_DOT_COLORS: Record<string, string> = {
@@ -48,7 +49,7 @@ function transitionLabel(from: string, to: string): string {
   return `${from} \u2192 ${to}`;
 }
 
-export function IncidentTimeline({ incidents }: IncidentTimelineProps) {
+export function IncidentTimeline({ incidents, endpointNames }: IncidentTimelineProps) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // Sort by most recent first
@@ -82,7 +83,12 @@ export function IncidentTimeline({ incidents }: IncidentTimelineProps) {
               />
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  {endpointNames?.[incident.id] && (
+                    <span className="text-sm font-semibold text-text truncate max-w-[200px]">
+                      {endpointNames[incident.id]}
+                    </span>
+                  )}
                   <span className="text-sm font-medium text-text">
                     {transitionLabel(incident.fromStatus, incident.toStatus)}
                   </span>
