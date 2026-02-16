@@ -850,14 +850,23 @@ function EnhancedCategoryCard({
         </div>
       </button>
 
-      {/* Expanded service list */}
+      {/* Expanded service list — horizontal flow */}
       {expanded && (
-        <div className="border-t border-border-strong/20 px-4 py-2">
-          {stat.results.map((r) => (
-            <div key={r.id} className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-2.5">
+        <div className="border-t border-border-strong/20 px-4 py-3">
+          <div className="flex flex-wrap gap-2">
+            {stat.results.map((r) => (
+              <div
+                key={r.id}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${
+                  r.status === "UP"
+                    ? "border-emerald-500/30 bg-emerald-500/5"
+                    : r.status === "DEGRADED"
+                      ? "border-amber-500/30 bg-amber-500/5"
+                      : "border-red-500/30 bg-red-500/5"
+                }`}
+              >
                 <span
-                  className={`inline-block h-2.5 w-2.5 rounded-full ${
+                  className={`inline-block h-1.5 w-1.5 rounded-full ${
                     r.status === "UP"
                       ? "bg-emerald-500"
                       : r.status === "DEGRADED"
@@ -865,20 +874,20 @@ function EnhancedCategoryCard({
                         : "bg-red-500"
                   }`}
                 />
-                <span className="text-sm">{r.name}</span>
+                <span className="whitespace-nowrap">{r.name}</span>
+                {r.status === "UP" && r.responseTimeMs > 0 && (
+                  <span className="text-text-muted tabular-nums">
+                    {r.responseTimeMs}ms
+                  </span>
+                )}
+                {r.status !== "UP" && r.error && (
+                  <span className="text-red-500 max-w-[120px] truncate">
+                    {r.error}
+                  </span>
+                )}
               </div>
-              {r.status === "UP" && r.responseTimeMs > 0 && (
-                <span className="text-xs text-text-muted tabular-nums">
-                  {r.responseTimeMs}ms
-                </span>
-              )}
-              {r.status !== "UP" && r.error && (
-                <span className="text-xs text-red-500 max-w-[180px] truncate">
-                  {r.error}
-                </span>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>

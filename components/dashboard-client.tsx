@@ -9,7 +9,6 @@ import { SummaryBar } from "@/components/summary-bar";
 import { SearchBar, type ViewMode } from "@/components/search-bar";
 import { SimpleView } from "@/components/simple-view";
 import { CategorySection } from "@/components/category-section";
-import { SidebarNav } from "@/components/sidebar-nav";
 import { IncidentTimeline } from "@/components/incident-timeline";
 import { Footer } from "@/components/footer";
 import { getAllBlastRadii } from "@/lib/graph-utils";
@@ -193,9 +192,6 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
 
       <Header lastChecked={data.timestamp} endpointCount={data.total} />
       <SummaryBar up={data.up} degraded={data.degraded} down={data.down} />
-
-      {/* Sidebar nav (lg+ only) */}
-      <SidebarNav categories={categoryResults} />
 
       <main id="main" className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <div className="mb-6">
