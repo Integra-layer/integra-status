@@ -134,9 +134,8 @@ Every endpoint has an `owner` (defined in `OWNERS` in `lib/health-config.ts`). E
 ### Alert frequency
 
 - Cron runs **every 60s** via ubuntu crontab
-- **1 ping** on DOWN/DEGRADED, **1 ping** on recovery (after 2 consecutive UP checks)
+- **All transitions require 2 consecutive checks** (~2 min) before alerting — DOWN, DEGRADED, and recovery
 - **Flap protection**: max 3 transitions per endpoint per 5-min window, then suppressed
-- **Recovery delay**: must pass 2 consecutive checks (~2 min) before recovery alert fires
 - **Daily digest**: 08:00 UTC summary to channel (no @mentions)
 - **No repeated pings** while status stays the same
 

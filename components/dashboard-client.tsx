@@ -12,6 +12,7 @@ import { CategorySection } from "@/components/category-section";
 import { IncidentTimeline } from "@/components/incident-timeline";
 import { Footer } from "@/components/footer";
 import { getAllBlastRadii } from "@/lib/graph-utils";
+import { capitalize } from "@/lib/utils";
 
 const NetworkGraph = dynamic(() => import("@/components/network-graph").then(m => ({ default: m.NetworkGraph })), { ssr: false });
 const Celebration = dynamic(() => import("@/components/celebration").then(m => ({ default: m.Celebration })), { ssr: false });
@@ -28,10 +29,6 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   frontends: <Globe className="h-5 w-5" />,
   external: <Link2 className="h-5 w-5" />,
 };
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 // ---------------------------------------------------------------------------
 // Dashboard client component

@@ -29,8 +29,11 @@
 
   /* Status — aligned to Integra brand tokens */
   --color-success: #1FC16B;
+  --color-success-bg: #d1fae5;
   --color-warning: #FA7319;
+  --color-warning-bg: #fef3c7;
   --color-danger: #FA3748;
+  --color-danger-bg: #fee2e2;
   --color-info: #335CFF;
 
   /* Light surfaces */

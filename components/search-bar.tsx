@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import type { Environment } from "@/lib/types";
+import { capitalize } from "@/lib/utils";
 
 export type ViewMode = "simple" | "detailed";
 
@@ -19,10 +20,6 @@ type SearchBarProps = {
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
 };
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 const ENVIRONMENTS: Array<{ key: Environment | "all"; label: string }> = [
   { key: "all", label: "All" },

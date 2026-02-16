@@ -111,16 +111,15 @@ export function EndpointCard({
                   {result.owner.telegram && (
                     <>
                       {" · "}
-                      <span
+                      <a
+                        href={`https://t.me/${result.owner.telegram}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-primary hover:underline"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          window.open(`https://t.me/${result.owner!.telegram}`, "_blank");
-                        }}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         @{result.owner.telegram}
-                      </span>
+                      </a>
                     </>
                   )}
                 </p>
@@ -158,8 +157,8 @@ export function EndpointCard({
           />
         )}
 
-        {/* Endpoint links — visible on hover and focus-within */}
-        <div className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200">
+        {/* Endpoint links — always visible on touch devices, hover-reveal on desktop */}
+        <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity duration-200">
           <EndpointLinks links={result.links} />
         </div>
 

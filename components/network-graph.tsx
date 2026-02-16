@@ -21,9 +21,9 @@ type SimNode = NetworkNode & SimulationNodeDatum;
 type SimLink = SimulationLinkDatum<SimNode> & { source: SimNode; target: SimNode };
 
 const STATUS_COLORS: Record<string, { fill: string; stroke: string }> = {
-  UP: { fill: "#d1fae5", stroke: "#10b981" },
-  DEGRADED: { fill: "#fef3c7", stroke: "#f59e0b" },
-  DOWN: { fill: "#fee2e2", stroke: "#ef4444" },
+  UP: { fill: "var(--color-success-bg, #d1fae5)", stroke: "var(--color-success, #10b981)" },
+  DEGRADED: { fill: "var(--color-warning-bg, #fef3c7)", stroke: "var(--color-warning, #f59e0b)" },
+  DOWN: { fill: "var(--color-danger-bg, #fee2e2)", stroke: "var(--color-danger, #ef4444)" },
 };
 
 const CATEGORY_OFFSETS: Record<string, { x: number; y: number }> = {
