@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import type { Environment } from "@/lib/types";
 
+export type ViewMode = "simple" | "detailed";
+
 type SearchBarProps = {
   endpointCount: number;
   categories: string[];
@@ -14,6 +16,8 @@ type SearchBarProps = {
   onCategoryToggle: (category: string) => void;
   activeEnvironment?: Environment | "all";
   onEnvironmentChange?: (env: Environment | "all") => void;
+  viewMode?: ViewMode;
+  onViewModeChange?: (mode: ViewMode) => void;
 };
 
 function capitalize(s: string): string {
@@ -37,6 +41,8 @@ export function SearchBar({
   onCategoryToggle,
   activeEnvironment = "all",
   onEnvironmentChange,
+  viewMode = "detailed",
+  onViewModeChange,
 }: SearchBarProps) {
   const [localQuery, setLocalQuery] = useState(searchQuery);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -98,6 +104,43 @@ export function SearchBar({
 
   return (
     <div className="w-full space-y-3">
+      {/* View mode toggle + Environment filter */}
+      <div className="flex flex-wrap items-center gap-3">
+        {onViewModeChange && (
+          <div
+            className="flex items-center gap-0.5 rounded-lg bg-muted/50 p-1"
+            role="tablist"
+            aria-label="View mode"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === "simple"}
+              onClick={() => onViewModeChange("simple")}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-200 cursor-pointer ${
+                viewMode === "simple"
+                  ? "bg-white dark:bg-neutral-800 text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Simple
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === "detailed"}
+              onClick={() => onViewModeChange("detailed")}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-200 cursor-pointer ${
+                viewMode === "detailed"
+                  ? "bg-white dark:bg-neutral-800 text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Detailed
+            </button>
+          </div>
+        )}
+
       {/* Environment filter tabs */}
       {onEnvironmentChange && (
         <div
@@ -123,6 +166,7 @@ export function SearchBar({
           ))}
         </div>
       )}
+      </div>
 
       {/* Search input */}
       <div className="group relative">

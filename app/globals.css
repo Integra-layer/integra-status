@@ -1,6 +1,6 @@
 /*
- * Integra Brand — Drop-in globals.css
- * Tailwind CSS v4 (@theme directive) + shadcn/ui
+ * Integra Status — globals.css
+ * Tailwind CSS v4 (@theme directive) + shadcn/ui + Integra brand tokens
  */
 
 @import "tailwindcss";
@@ -13,8 +13,8 @@
 
 /* ─── Theme Tokens ─── */
 @theme {
-  /* Fonts */
-  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  /* Fonts — Montserrat (fallback for Euclid Circular B) */
+  --font-sans: var(--font-montserrat), "Montserrat", system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Brand */
@@ -27,7 +27,7 @@
   --color-brand-red: #F71227;
   --color-brand-teal: #00A186;
 
-  /* Status */
+  /* Status — aligned to Integra brand tokens */
   --color-success: #1FC16B;
   --color-warning: #FA7319;
   --color-danger: #FA3748;
@@ -114,75 +114,75 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* shadcn/ui light mode CSS variables */
+/* shadcn/ui light mode — mapped to Integra brand */
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: var(--color-surface);
+  --foreground: var(--color-text);
+  --card: var(--color-surface-card);
+  --card-foreground: var(--color-text);
+  --popover: var(--color-surface-card);
+  --popover-foreground: var(--color-text);
+  --primary: var(--color-brand);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--color-surface-muted);
+  --secondary-foreground: var(--color-text);
+  --muted: var(--color-surface-muted);
+  --muted-foreground: var(--color-text-muted);
+  --accent: var(--color-surface-muted);
+  --accent-foreground: var(--color-text);
+  --destructive: var(--color-danger);
+  --border: var(--color-border-strong);
+  --input: var(--color-border-strong);
+  --ring: var(--color-brand);
+  --chart-1: var(--color-brand);
+  --chart-2: var(--color-brand-teal);
+  --chart-3: var(--color-brand-pink);
+  --chart-4: var(--color-brand-gold);
+  --chart-5: var(--color-info);
+  --sidebar: var(--color-surface);
+  --sidebar-foreground: var(--color-text);
+  --sidebar-primary: var(--color-brand);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: var(--color-surface-muted);
+  --sidebar-accent-foreground: var(--color-text);
+  --sidebar-border: var(--color-border-strong);
+  --sidebar-ring: var(--color-brand);
 }
 
-/* shadcn/ui dark mode CSS variables */
+/* shadcn/ui dark mode — mapped to Integra dark palette */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: var(--color-surface-dark);
+  --foreground: var(--color-text-light);
+  --card: var(--color-surface-dark-card);
+  --card-foreground: var(--color-text-light);
+  --popover: var(--color-surface-dark-card);
+  --popover-foreground: var(--color-text-light);
+  --primary: var(--color-brand);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--color-surface-dark-muted);
+  --secondary-foreground: var(--color-text-light);
+  --muted: var(--color-surface-dark-muted);
+  --muted-foreground: var(--color-text-light-muted);
+  --accent: var(--color-surface-dark-elevated);
+  --accent-foreground: var(--color-text-light);
+  --destructive: var(--color-danger);
+  --border: var(--color-border-dark);
+  --input: var(--color-border-dark-strong);
+  --ring: var(--color-brand);
+  --chart-1: var(--color-brand-light);
+  --chart-2: var(--color-brand-teal);
+  --chart-3: var(--color-brand-pink-light);
+  --chart-4: var(--color-brand-gold);
+  --chart-5: var(--color-info);
+  --sidebar: var(--color-surface-dark);
+  --sidebar-foreground: var(--color-text-light);
+  --sidebar-primary: var(--color-brand);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: var(--color-surface-dark-elevated);
+  --sidebar-accent-foreground: var(--color-text-light);
+  --sidebar-border: var(--color-border-dark);
+  --sidebar-ring: var(--color-brand);
 }
 
 /* ─── Base Styles ─── */
@@ -192,8 +192,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    background: var(--color-surface);
-    color: var(--color-text);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -241,17 +239,17 @@
   height: 8px;
   border-radius: 9999px;
   background: var(--color-success);
-  animation: pulse-dot 2s ease-in-out infinite;
+  animation: pulse-dot 3s ease-in-out infinite;
 }
 
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.5); }
+  50% { opacity: 0.6; transform: scale(1.3); }
 }
 
 /* ─── Component Animations ─── */
 
-/* Header gradient border animation */
+/* Header gradient border — slowed down for subtlety */
 @keyframes gradient-shift {
   0% { background-position: 0% 50%; }
   100% { background-position: 200% 50%; }
@@ -260,21 +258,21 @@
 .gradient-border-animated {
   background: linear-gradient(90deg, var(--color-brand-pink-light), var(--color-brand-pink), var(--color-brand), var(--color-brand-red));
   background-size: 200% 100%;
-  animation: gradient-shift 8s linear infinite;
+  animation: gradient-shift 12s linear infinite;
 }
 
-/* Status dot pulse variants */
+/* Status dot pulse variants — toned down */
 @keyframes pulse-green {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.4); }
+  50% { opacity: 0.6; transform: scale(1.2); }
 }
 @keyframes pulse-amber {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.4); }
+  50% { opacity: 0.6; transform: scale(1.2); }
 }
 @keyframes pulse-red {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.4); }
+  50% { opacity: 0.6; transform: scale(1.2); }
 }
 
 /* Sparkline draw-in */
@@ -303,7 +301,7 @@
   50% { box-shadow: 0 0 12px 4px rgba(250, 55, 72, 0.3); }
 }
 
-/* Recovery sweep for DOWN→UP */
+/* Recovery sweep for DOWN->UP */
 @keyframes shimmer-green {
   0% { background-position: -100% 0; }
   100% { background-position: 200% 0; }
@@ -387,21 +385,21 @@
 
 /* Status-tinted card backgrounds */
 .card-tint-down {
-  background: linear-gradient(135deg, rgba(239,68,68,0.04) 0%, transparent 60%);
+  background: linear-gradient(135deg, rgba(250,55,72,0.04) 0%, transparent 60%);
 }
 .card-tint-degraded {
-  background: linear-gradient(135deg, rgba(245,158,11,0.04) 0%, transparent 60%);
+  background: linear-gradient(135deg, rgba(250,115,25,0.04) 0%, transparent 60%);
 }
 
 /* Category health gradient backgrounds */
 .category-tint-up {
-  background: linear-gradient(90deg, rgba(16,185,129,0.03) 0%, transparent 40%);
+  background: linear-gradient(90deg, rgba(31,193,107,0.03) 0%, transparent 40%);
 }
 .category-tint-degraded {
-  background: linear-gradient(90deg, rgba(245,158,11,0.03) 0%, transparent 40%);
+  background: linear-gradient(90deg, rgba(250,115,25,0.03) 0%, transparent 40%);
 }
 .category-tint-down {
-  background: linear-gradient(90deg, rgba(239,68,68,0.03) 0%, transparent 40%);
+  background: linear-gradient(90deg, rgba(250,55,72,0.03) 0%, transparent 40%);
 }
 
 /* ─── Confetti celebration ─── */

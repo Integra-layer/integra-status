@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
+import { Montserrat } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-montserrat",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Integra Status",
@@ -11,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
+    <html lang="en" className={`${montserrat.variable} ${GeistMono.variable}`}>
       <body className="bg-surface font-sans text-text antialiased">
         <a
           href="#main"

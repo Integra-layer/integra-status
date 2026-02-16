@@ -2,17 +2,20 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Blocks, Shield, Server, Globe, Link2, ChevronDown } from "lucide-react";
 import { Header } from "@/components/header";
 import { SummaryBar } from "@/components/summary-bar";
-import { SearchBar } from "@/components/search-bar";
+import { SearchBar, type ViewMode } from "@/components/search-bar";
+import { SimpleView } from "@/components/simple-view";
 import { CategorySection } from "@/components/category-section";
 import { SidebarNav } from "@/components/sidebar-nav";
-import { NetworkGraph } from "@/components/network-graph";
 import { IncidentTimeline } from "@/components/incident-timeline";
 import { Footer } from "@/components/footer";
-import { Celebration } from "@/components/celebration";
 import { getAllBlastRadii } from "@/lib/graph-utils";
+
+const NetworkGraph = dynamic(() => import("@/components/network-graph").then(m => ({ default: m.NetworkGraph })), { ssr: false });
+const Celebration = dynamic(() => import("@/components/celebration").then(m => ({ default: m.Celebration })), { ssr: false });
 import type { HealthSummary, Category, Environment } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -47,6 +50,17 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
   const [activeEnvironment, setActiveEnvironment] = useState<Environment | "all">("all");
   const [showTimeline, setShowTimeline] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("integra-view-mode") as ViewMode) || "detailed";
+    }
+    return "detailed";
+  });
+
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem("integra-view-mode", mode);
+  }, []);
 
   // Compute blast radii from dependency graph (client-side BFS)
   const blastRadii = useMemo(
@@ -95,11 +109,11 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Auto-refresh: trigger ISR revalidation every 30s
+  // Auto-refresh: trigger ISR revalidation every 60s
   useEffect(() => {
     const interval = setInterval(() => {
       router.refresh();
-    }, 30_000);
+    }, 60_000);
     return () => clearInterval(interval);
   }, [router]);
 
@@ -185,68 +199,76 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
             onCategoryToggle={toggleCategory}
             activeEnvironment={activeEnvironment}
             onEnvironmentChange={setActiveEnvironment}
+            viewMode={viewMode}
+            onViewModeChange={handleViewModeChange}
           />
         </div>
 
-        {/* Network graph (collapsible) */}
-        <div className="mb-6">
-          <NetworkGraph data={data} />
-        </div>
-
-        {/* Category sections */}
-        <div className="space-y-4">
-          {categoryResults.map((cat) => (
-            <CategorySection
-              key={cat.name}
-              name={cat.name}
-              icon={cat.icon}
-              results={cat.results}
-              sparklines={data.history.sparklines}
-              uptimes={data.history.uptimes}
-              defaultOpen={cat.results.some(
-                (r) => r.status === "DOWN" || r.status === "DEGRADED",
-              )}
-              blastRadii={blastRadii}
-              impactMap={data.impactMap}
-              dependencyGraph={data.dependencyGraph}
-              allResults={data.results}
-              flashClasses={flashClasses}
-            />
-          ))}
-
-          {categoryResults.length === 0 && (
-            <div className="rounded-lg border border-border-strong/30 bg-surface-card p-8 text-center">
-              <p className="text-sm text-text-muted">
-                No endpoints match your search.
-              </p>
+        {viewMode === "simple" ? (
+          <SimpleView data={data} categories={categories} />
+        ) : (
+          <>
+            {/* Network graph (collapsible) */}
+            <div className="mb-6">
+              <NetworkGraph data={data} />
             </div>
-          )}
-        </div>
 
-        {/* Incident timeline (collapsible) */}
-        {recentIncidents.length > 0 && (
-          <div className="mt-6 rounded-xl border border-border-strong/30 bg-surface-card dark:bg-surface-dark-card overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShowTimeline((p) => !p)}
-              className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors cursor-pointer"
-            >
-              <h2 className="text-sm font-semibold">Recent Incidents</h2>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {recentIncidents.length} event{recentIncidents.length !== 1 ? "s" : ""}
-                </span>
-                <ChevronDown
-                  className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${showTimeline ? "rotate-180" : ""}`}
+            {/* Category sections */}
+            <div className="space-y-4">
+              {categoryResults.map((cat) => (
+                <CategorySection
+                  key={cat.name}
+                  name={cat.name}
+                  icon={cat.icon}
+                  results={cat.results}
+                  sparklines={data.history.sparklines}
+                  uptimes={data.history.uptimes}
+                  defaultOpen={cat.results.some(
+                    (r) => r.status === "DOWN" || r.status === "DEGRADED",
+                  )}
+                  blastRadii={blastRadii}
+                  impactMap={data.impactMap}
+                  dependencyGraph={data.dependencyGraph}
+                  allResults={data.results}
+                  flashClasses={flashClasses}
                 />
-              </div>
-            </button>
-            {showTimeline && (
-              <div className="border-t border-border-strong/20 p-4">
-                <IncidentTimeline incidents={recentIncidents} />
+              ))}
+
+              {categoryResults.length === 0 && (
+                <div className="rounded-lg border border-border-strong/30 bg-surface-card p-8 text-center">
+                  <p className="text-sm text-text-muted">
+                    No endpoints match your search.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Incident timeline (collapsible) */}
+            {recentIncidents.length > 0 && (
+              <div className="mt-6 rounded-xl border border-border-strong/30 bg-surface-card dark:bg-surface-dark-card overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowTimeline((p) => !p)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors cursor-pointer"
+                >
+                  <h2 className="text-sm font-semibold">Recent Incidents</h2>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {recentIncidents.length} event{recentIncidents.length !== 1 ? "s" : ""}
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${showTimeline ? "rotate-180" : ""}`}
+                    />
+                  </div>
+                </button>
+                {showTimeline && (
+                  <div className="border-t border-border-strong/20 p-4">
+                    <IncidentTimeline incidents={recentIncidents} />
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
       </main>
 

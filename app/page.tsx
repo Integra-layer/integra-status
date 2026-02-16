@@ -17,7 +17,7 @@ import {
 import { DashboardClient } from "@/components/dashboard-client";
 import type { HealthSummary } from "@/lib/types";
 
-export const revalidate = 30;
+export const revalidate = 60;
 
 export default async function DashboardPage() {
   const results = await checkAll();
@@ -36,10 +36,10 @@ export default async function DashboardPage() {
     }
   }
 
-  // Record history snapshot
+  // Record history snapshot (fire-and-forget — don't block render on file I/O)
   let hist = loadHistory();
   hist = recordSnapshot(hist, results);
-  saveHistory(hist);
+  void Promise.resolve().then(() => saveHistory(hist));
 
   const data: HealthSummary = {
     timestamp: new Date().toISOString(),

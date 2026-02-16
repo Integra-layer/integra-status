@@ -25,7 +25,7 @@ export function Footer({ endpointCount, categoryCount }: FooterProps) {
             style={{ animation: "pulse-green 2s ease-in-out infinite" }}
             aria-hidden="true"
           />
-          Auto-refreshes every 30s
+          Auto-refreshes every 60s
         </div>
       </div>
     </footer>
