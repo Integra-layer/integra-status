@@ -520,25 +520,40 @@ async function checkExplorerSync(ep: Endpoint): Promise<CheckResult> {
   const start = Date.now();
   const details: Record<string, unknown> = {};
 
-  // 1. Get explorer's latest synced block from its API
+  // 1. Get explorer's latest synced block
+  // Supports: GraphQL (Hasura) or JSON API responses
   let explorerBlock: number | null = null;
   try {
-    const statusRes = await httpRequest(ep.url, { timeout: ep.timeout });
+    const isGraphql = ep.url.includes("/graphql");
+    const reqOpts: HttpRequestOptions = { timeout: ep.timeout };
+
+    if (isGraphql) {
+      reqOpts.method = "POST";
+      reqOpts.headers = { "Content-Type": "application/json" };
+      reqOpts.body = JSON.stringify({
+        query: "{ block(order_by:{height:desc}, limit:1) { height } }",
+      });
+    }
+
+    const statusRes = await httpRequest(ep.url, reqOpts);
     if (statusRes.statusCode >= 200 && statusRes.statusCode < 400) {
       try {
         const data = JSON.parse(statusRes.body);
-        // Try common field names for latest block
-        explorerBlock =
-          data.lastSyncedBlock ??
-          data.latestBlock ??
-          data.blockHeight ??
-          data.height ??
-          data.currentBlock ??
-          null;
-        if (explorerBlock !== null) explorerBlock = Number(explorerBlock);
+        if (isGraphql && data.data?.block?.[0]?.height) {
+          explorerBlock = Number(data.data.block[0].height);
+        } else {
+          explorerBlock =
+            data.lastSyncedBlock ??
+            data.latestBlock ??
+            data.blockHeight ??
+            data.height ??
+            data.currentBlock ??
+            null;
+          if (explorerBlock !== null) explorerBlock = Number(explorerBlock);
+        }
         details.explorerStatus = statusRes.statusCode;
       } catch (_) {
-        // Not JSON — try to extract block number from HTML/text
+        // Not valid JSON
       }
     } else {
       return buildResult(

@@ -2025,19 +2025,19 @@ export const ENDPOINTS: Endpoint[] = [
     name: "Mainnet Explorer Sync",
     category: "blockchain",
     environment: "prod",
-    url: "https://explorer.integralayer.com/api/status",
+    url: "https://scan.integralayer.com/v1/graphql",
     checkType: "explorer-sync",
     chainRpcUrl: "https://adamboudj.integralayer.com/rpc",
     timeout: 15000,
     enabled: true,
-    dependsOn: ["mainnet-evm-rpc", "explorer-mainnet"],
-    impacts: ["explorer-mainnet"],
+    dependsOn: ["mainnet-evm-rpc", "explorer-v2"],
+    impacts: ["explorer-v2"],
     impactDescription:
-      "Mainnet explorer shows stale data — blocks and transactions not updating",
+      "Explorer v2 shows stale data — blocks and transactions not updating",
     description:
-      "Explorer sync freshness — compares indexed block height with chain head",
+      "Explorer v2 sync freshness — compares Callisto indexed block height with chain head",
     richDescription:
-      "Monitors the mainnet block explorer's indexer sync status by comparing its latest indexed block height against the actual chain head from the EVM RPC. Detects stuck BullMQ jobs, crashed PM2 sync processes, and worker disconnections that cause the explorer to fall behind. A lag of >100 blocks triggers DOWN status. This is the early warning system for the most common explorer failure mode — sync stalls that leave users viewing stale blockchain data.",
+      "Monitors the Explorer v2 (Callisto/Hasura) sync status by querying the latest indexed block via GraphQL and comparing against the actual chain head from the EVM RPC. Detects Callisto indexer stalls, PostgreSQL issues, or chain node disconnections. A lag of >100 blocks triggers DOWN status. This is the early warning system for explorer data staleness.",
     owner: OWNERS.adam,
     links: {
       endpoint: "https://explorer.integralayer.com",
@@ -2055,7 +2055,7 @@ export const ENDPOINTS: Endpoint[] = [
     checkType: "explorer-sync",
     chainRpcUrl: "https://testnet.integralayer.com/evm",
     timeout: 15000,
-    enabled: true,
+    enabled: false, // Ethernal API is auth-gated — no public block height endpoint
     dependsOn: ["testnet-evm-rpc", "explorer-testnet"],
     impacts: ["explorer-testnet"],
     impactDescription:
@@ -2078,7 +2078,7 @@ export const ENDPOINTS: Endpoint[] = [
     category: "apis",
     environment: "prod",
     url: "https://explorer.integralayer.com/api/status",
-    checkType: "api-health",
+    checkType: "http-reachable", // Returns 401 (auth-gated) but proves backend is alive
     timeout: 10000,
     enabled: true,
     dependsOn: ["explorer-mainnet"],
@@ -2101,7 +2101,7 @@ export const ENDPOINTS: Endpoint[] = [
     category: "apis",
     environment: "dev",
     url: "https://testnet.explorer.integralayer.com/api/status",
-    checkType: "api-health",
+    checkType: "http-reachable", // Returns 401 (auth-gated) but proves backend is alive
     timeout: 10000,
     enabled: true,
     dependsOn: ["explorer-testnet"],
