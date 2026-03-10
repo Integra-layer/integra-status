@@ -11,8 +11,17 @@ import type { Category, Environment } from "./types";
 // ---------------------------------------------------------------------------
 
 // Keep-alive agents reuse TCP connections across checks (~200ms savings)
-const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 20, keepAliveMsecs: 30_000 });
-const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 20, keepAliveMsecs: 30_000, rejectUnauthorized: false });
+const httpAgent = new http.Agent({
+  keepAlive: true,
+  maxSockets: 20,
+  keepAliveMsecs: 30_000,
+});
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 20,
+  keepAliveMsecs: 30_000,
+  rejectUnauthorized: false,
+});
 
 type HttpResponse = {
   statusCode: number;
@@ -28,7 +37,10 @@ type HttpRequestOptions = {
   timeout?: number;
 };
 
-function httpRequest(url: string, opts: HttpRequestOptions = {}): Promise<HttpResponse> {
+function httpRequest(
+  url: string,
+  opts: HttpRequestOptions = {},
+): Promise<HttpResponse> {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
     const isHttps = parsed.protocol === "https:";
@@ -131,7 +143,8 @@ async function checkEvmRpc(ep: Endpoint): Promise<CheckResult> {
   ]);
 
   const blockData = JSON.parse(blockRes.body);
-  if (blockData.error) throw new Error(blockData.error.message || "eth_blockNumber failed");
+  if (blockData.error)
+    throw new Error(blockData.error.message || "eth_blockNumber failed");
   details.blockHeight = parseInt(blockData.result, 16);
 
   const chainData = JSON.parse(chainRes.body);
@@ -153,17 +166,23 @@ async function checkCosmosRpc(ep: Endpoint): Promise<CheckResult> {
   const details: Record<string, unknown> = {};
   const start = Date.now();
 
-  const statusRes = await httpRequest(`${ep.url}/status`, { timeout: ep.timeout });
-  if (statusRes.statusCode !== 200) throw new Error(`HTTP ${statusRes.statusCode}`);
+  const statusRes = await httpRequest(`${ep.url}/status`, {
+    timeout: ep.timeout,
+  });
+  if (statusRes.statusCode !== 200)
+    throw new Error(`HTTP ${statusRes.statusCode}`);
   const statusData = JSON.parse(statusRes.body);
-  const syncInfo = statusData.result ? statusData.result.sync_info : statusData.sync_info;
+  const syncInfo = statusData.result
+    ? statusData.result.sync_info
+    : statusData.sync_info;
 
   if (syncInfo) {
     details.blockHeight = parseInt(syncInfo.latest_block_height, 10);
     details.latestBlockTime = syncInfo.latest_block_time;
     details.catchingUp = syncInfo.catching_up;
 
-    const blockAge = (Date.now() - new Date(syncInfo.latest_block_time).getTime()) / 1000;
+    const blockAge =
+      (Date.now() - new Date(syncInfo.latest_block_time).getTime()) / 1000;
     details.blockAgeSec = Math.round(blockAge);
 
     if (blockAge > CHAIN_HALT_THRESHOLD_SECONDS) {
@@ -176,12 +195,20 @@ async function checkCosmosRpc(ep: Endpoint): Promise<CheckResult> {
       );
     }
     if (syncInfo.catching_up) {
-      return buildResult(ep, "DEGRADED", Date.now() - start, details, "Node is catching up");
+      return buildResult(
+        ep,
+        "DEGRADED",
+        Date.now() - start,
+        details,
+        "Node is catching up",
+      );
     }
   }
 
   try {
-    const netRes = await httpRequest(`${ep.url}/net_info`, { timeout: ep.timeout });
+    const netRes = await httpRequest(`${ep.url}/net_info`, {
+      timeout: ep.timeout,
+    });
     if (netRes.statusCode === 200) {
       const netData = JSON.parse(netRes.body);
       const peers = netData.result ? netData.result.peers : netData.peers;
@@ -204,7 +231,8 @@ async function checkCosmosRest(ep: Endpoint): Promise<CheckResult> {
     `${ep.url}/cosmos/base/tendermint/v1beta1/blocks/latest`,
     { timeout: ep.timeout },
   );
-  if (blockRes.statusCode !== 200) throw new Error(`HTTP ${blockRes.statusCode}`);
+  if (blockRes.statusCode !== 200)
+    throw new Error(`HTTP ${blockRes.statusCode}`);
   const blockData = JSON.parse(blockRes.body);
   const header = blockData.block?.header || blockData.sdk_block?.header;
 
@@ -234,7 +262,9 @@ async function checkCosmosRest(ep: Endpoint): Promise<CheckResult> {
     );
     if (valRes.statusCode === 200) {
       const valData = JSON.parse(valRes.body);
-      details.bondedValidators = valData.validators ? valData.validators.length : null;
+      details.bondedValidators = valData.validators
+        ? valData.validators.length
+        : null;
     }
   } catch (_) {
     // validator count is optional — swallow errors
@@ -246,7 +276,8 @@ async function checkCosmosRest(ep: Endpoint): Promise<CheckResult> {
 async function checkHttpJson(ep: Endpoint): Promise<CheckResult> {
   const start = Date.now();
   const res = await httpRequest(ep.url, { timeout: ep.timeout });
-  if (res.statusCode < 200 || res.statusCode >= 400) throw new Error(`HTTP ${res.statusCode}`);
+  if (res.statusCode < 200 || res.statusCode >= 400)
+    throw new Error(`HTTP ${res.statusCode}`);
 
   const data = JSON.parse(res.body);
   const details: Record<string, unknown> = { statusCode: res.statusCode };
@@ -268,7 +299,9 @@ async function checkHttpGet(ep: Endpoint): Promise<CheckResult> {
   const start = Date.now();
   const res = await httpRequest(ep.url, { timeout: ep.timeout });
   if (res.statusCode >= 200 && res.statusCode < 400) {
-    return buildResult(ep, "UP", Date.now() - start, { statusCode: res.statusCode });
+    return buildResult(ep, "UP", Date.now() - start, {
+      statusCode: res.statusCode,
+    });
   }
   throw new Error(`HTTP ${res.statusCode}`);
 }
@@ -276,7 +309,9 @@ async function checkHttpGet(ep: Endpoint): Promise<CheckResult> {
 async function checkWebsocket(ep: Endpoint): Promise<CheckResult> {
   const start = Date.now();
   return new Promise((resolve, reject) => {
-    const parsed = new URL(ep.url.replace("wss://", "https://").replace("ws://", "http://"));
+    const parsed = new URL(
+      ep.url.replace("wss://", "https://").replace("ws://", "http://"),
+    );
     const mod = parsed.protocol === "https:" ? https : http;
     const req = mod.request(
       {
@@ -287,7 +322,9 @@ async function checkWebsocket(ep: Endpoint): Promise<CheckResult> {
         headers: {
           Upgrade: "websocket",
           Connection: "Upgrade",
-          "Sec-WebSocket-Key": Buffer.from(Math.random().toString()).toString("base64"),
+          "Sec-WebSocket-Key": Buffer.from(Math.random().toString()).toString(
+            "base64",
+          ),
           "Sec-WebSocket-Version": "13",
         },
         timeout: ep.timeout,
@@ -295,7 +332,11 @@ async function checkWebsocket(ep: Endpoint): Promise<CheckResult> {
       },
       (res) => {
         if (res.statusCode && res.statusCode < 400) {
-          resolve(buildResult(ep, "UP", Date.now() - start, { statusCode: res.statusCode }));
+          resolve(
+            buildResult(ep, "UP", Date.now() - start, {
+              statusCode: res.statusCode,
+            }),
+          );
         } else {
           reject(new Error(`HTTP ${res.statusCode}`));
         }
@@ -336,7 +377,8 @@ async function checkHttpReachable(ep: Endpoint): Promise<CheckResult> {
   const start = Date.now();
   const res = await httpRequest(ep.url, { timeout: ep.timeout });
   const details: Record<string, unknown> = { statusCode: res.statusCode };
-  if (res.statusCode < 500) return buildResult(ep, "UP", Date.now() - start, details);
+  if (res.statusCode < 500)
+    return buildResult(ep, "UP", Date.now() - start, details);
   throw new Error(`HTTP ${res.statusCode}`);
 }
 
@@ -404,10 +446,20 @@ async function checkDeepHealth(ep: Endpoint): Promise<CheckResult> {
           const comp = (components as Record<string, unknown>)[key];
           const compStatus =
             typeof comp === "object" && comp !== null
-              ? (comp as Record<string, unknown>).status || (comp as Record<string, unknown>).state
+              ? (comp as Record<string, unknown>).status ||
+                (comp as Record<string, unknown>).state
               : comp;
-          if (compStatus && /down|unhealthy|error|fail/i.test(String(compStatus))) {
-            return buildResult(ep, "DEGRADED", Date.now() - start, details, key + " is unhealthy");
+          if (
+            compStatus &&
+            /down|unhealthy|error|fail/i.test(String(compStatus))
+          ) {
+            return buildResult(
+              ep,
+              "DEGRADED",
+              Date.now() - start,
+              details,
+              key + " is unhealthy",
+            );
           }
         }
       }
@@ -434,7 +486,9 @@ async function checkCosmosPeer(ep: Endpoint): Promise<CheckResult> {
   const peerIp = ep.peerIp || new URL(ep.url).hostname;
   const publicRpc = ep.publicRpc || "https://rpc.integralayer.com";
 
-  const res = await httpRequest(`${publicRpc}/net_info`, { timeout: ep.timeout });
+  const res = await httpRequest(`${publicRpc}/net_info`, {
+    timeout: ep.timeout,
+  });
   if (res.statusCode !== 200)
     throw new Error(`Public RPC returned HTTP ${res.statusCode}`);
 
@@ -453,7 +507,121 @@ async function checkCosmosPeer(ep: Endpoint): Promise<CheckResult> {
     }
   }
 
-  return buildResult(ep, "DEGRADED", Date.now() - start, details, "Validator not found in peer list");
+  return buildResult(
+    ep,
+    "DEGRADED",
+    Date.now() - start,
+    details,
+    "Validator not found in peer list",
+  );
+}
+
+async function checkExplorerSync(ep: Endpoint): Promise<CheckResult> {
+  const start = Date.now();
+  const details: Record<string, unknown> = {};
+
+  // 1. Get explorer's latest synced block from its API
+  let explorerBlock: number | null = null;
+  try {
+    const statusRes = await httpRequest(ep.url, { timeout: ep.timeout });
+    if (statusRes.statusCode >= 200 && statusRes.statusCode < 400) {
+      try {
+        const data = JSON.parse(statusRes.body);
+        // Try common field names for latest block
+        explorerBlock =
+          data.lastSyncedBlock ??
+          data.latestBlock ??
+          data.blockHeight ??
+          data.height ??
+          data.currentBlock ??
+          null;
+        if (explorerBlock !== null) explorerBlock = Number(explorerBlock);
+        details.explorerStatus = statusRes.statusCode;
+      } catch (_) {
+        // Not JSON — try to extract block number from HTML/text
+      }
+    } else {
+      return buildResult(
+        ep,
+        "DOWN",
+        Date.now() - start,
+        details,
+        `Explorer API returned HTTP ${statusRes.statusCode}`,
+      );
+    }
+  } catch (err: unknown) {
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      `Explorer unreachable: ${(err as Error).message}`,
+    );
+  }
+
+  // 2. Get chain head from EVM RPC
+  let chainBlock: number | null = null;
+  if (ep.chainRpcUrl) {
+    try {
+      const rpcRes = await jsonRpc(
+        ep.chainRpcUrl,
+        "eth_blockNumber",
+        [],
+        ep.timeout,
+      );
+      const rpcData = JSON.parse(rpcRes.body);
+      if (rpcData.result) {
+        chainBlock = parseInt(rpcData.result, 16);
+      }
+    } catch (_) {
+      details.chainRpcError = "Failed to query chain RPC";
+    }
+  }
+
+  details.explorerBlock = explorerBlock;
+  details.chainBlock = chainBlock;
+
+  // 3. Compare
+  if (explorerBlock !== null && chainBlock !== null) {
+    const lag = chainBlock - explorerBlock;
+    details.lag = lag;
+    // Estimate lag in seconds (~2s per block for Integra)
+    details.lagSeconds = lag * 2;
+
+    if (lag <= 10) {
+      return buildResult(ep, "UP", Date.now() - start, details);
+    }
+    if (lag <= 100) {
+      return buildResult(
+        ep,
+        "DEGRADED",
+        Date.now() - start,
+        details,
+        `Explorer ${lag} blocks behind chain`,
+      );
+    }
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      `Explorer ${lag} blocks behind chain (${Math.round((lag * 2) / 60)} min lag)`,
+    );
+  }
+
+  // If we couldn't get explorer block but it responded, it's degraded
+  if (explorerBlock === null) {
+    return buildResult(
+      ep,
+      "DEGRADED",
+      Date.now() - start,
+      details,
+      "Could not determine explorer sync height from API response",
+    );
+  }
+
+  // Got explorer block but no chain comparison — report what we have
+  return buildResult(ep, "UP", Date.now() - start, details);
 }
 
 // ---------------------------------------------------------------------------
@@ -474,11 +642,19 @@ const CHECK_FNS: Record<CheckType, CheckFn> = {
   "deep-health": checkDeepHealth,
   graphql: checkGraphql,
   "cosmos-peer-check": checkCosmosPeer,
+  "explorer-sync": checkExplorerSync,
 };
 
 export async function runCheck(ep: Endpoint): Promise<CheckResult> {
   const fn = CHECK_FNS[ep.checkType];
-  if (!fn) return buildResult(ep, "DOWN", 0, {}, `Unknown check type: ${ep.checkType}`);
+  if (!fn)
+    return buildResult(
+      ep,
+      "DOWN",
+      0,
+      {},
+      `Unknown check type: ${ep.checkType}`,
+    );
   try {
     return await fn(ep);
   } catch (err: unknown) {
@@ -513,6 +689,12 @@ export async function checkAll(opts?: CheckAllOptions): Promise<CheckResult[]> {
   return results.map((r, i) =>
     r.status === "fulfilled"
       ? r.value
-      : buildResult(endpoints[i], "DOWN", 0, {}, r.reason?.message || "Check failed"),
+      : buildResult(
+          endpoints[i],
+          "DOWN",
+          0,
+          {},
+          r.reason?.message || "Check failed",
+        ),
   );
 }
