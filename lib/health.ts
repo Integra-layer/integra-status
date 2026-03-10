@@ -653,10 +653,11 @@ async function checkExplorerDeepHealth(ep: Endpoint): Promise<CheckResult> {
       limit: 50
     ) { height num_txs transactions_aggregate { aggregate { count } } }
     last_write: block(order_by: {height: desc}, limit: 1) { height timestamp }
-    receipt_check: transaction(
-      order_by: { id: desc }
+    log_check: transaction(
+      where: { success: { _eq: true } }
+      order_by: { height: desc }
       limit: 100
-    ) { hash receipt { transactionHash } }
+    ) { hash success gas_used raw_log }
   }`;
 
   let data: Record<string, unknown>;
@@ -791,35 +792,37 @@ async function checkExplorerDeepHealth(ep: Endpoint): Promise<CheckResult> {
     });
   }
 
-  // Sub-check 4: Receipt completeness
-  const txs = data.receipt_check as Array<{
+  // Sub-check 4: Log completeness (successful txs should have gas_used > 0)
+  const txs = data.log_check as Array<{
     hash: string;
-    receipt: { transactionHash: string } | null;
+    success: boolean;
+    gas_used: number;
+    raw_log: string | null;
   }>;
   if (txs && txs.length > 0) {
-    const missing = txs.filter((t) => !t.receipt).length;
-    const pct = Math.round((missing / txs.length) * 100);
-    details.receiptsMissing = missing;
-    details.receiptsChecked = txs.length;
-    details.receiptsMissingPct = pct;
+    const incomplete = txs.filter((t) => t.success && t.gas_used === 0).length;
+    const pct = Math.round((incomplete / txs.length) * 100);
+    details.logIncomplete = incomplete;
+    details.logsChecked = txs.length;
+    details.logIncompletePct = pct;
     if (pct > 20) {
       subChecks.push({
-        name: "receipt_completeness",
+        name: "log_completeness",
         status: "DEGRADED",
-        detail: `${missing}/${txs.length} (${pct}%) transactions missing receipts`,
+        detail: `${incomplete}/${txs.length} (${pct}%) successful txs have zero gas_used`,
       });
     } else {
       subChecks.push({
-        name: "receipt_completeness",
+        name: "log_completeness",
         status: "UP",
-        detail: `${txs.length - missing}/${txs.length} transactions have receipts`,
+        detail: `${txs.length - incomplete}/${txs.length} successful txs have valid gas data`,
       });
     }
   } else {
     subChecks.push({
-      name: "receipt_completeness",
+      name: "log_completeness",
       status: "UP",
-      detail: "No transactions to check",
+      detail: "No successful transactions to check",
     });
   }
 
