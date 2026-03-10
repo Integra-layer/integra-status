@@ -17,7 +17,10 @@ type EndpointCardProps = {
   index?: number;
   blastRadius?: number;
   impactedServices?: Array<{ id: string; name: string }>;
-  dependencyGraph?: Record<string, { dependsOn: string[]; requiredBy: string[] }>;
+  dependencyGraph?: Record<
+    string,
+    { dependsOn: string[]; requiredBy: string[] }
+  >;
   allResults?: CheckResult[];
   flashClass?: string;
 };
@@ -37,6 +40,11 @@ const STATUS_DOT_CONFIG = {
     color: "bg-red-500",
     animation: "pulse-red 1.5s ease-in-out infinite",
     glow: "0 0 8px 2px rgba(239,68,68,0.4)",
+  },
+  DEPLOYING: {
+    color: "bg-blue-500",
+    animation: "pulse-blue 1s ease-in-out infinite",
+    glow: "0 0 8px 2px rgba(59,130,246,0.4)",
   },
 } as const;
 
@@ -63,7 +71,11 @@ export function EndpointCard({
     >
       <Card
         className={`group relative p-4 gap-3 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 opacity-0 gradient-border-hover ${
-          result.status === "DOWN" ? "card-tint-down" : result.status === "DEGRADED" ? "card-tint-degraded" : ""
+          result.status === "DOWN"
+            ? "card-tint-down"
+            : result.status === "DEGRADED"
+              ? "card-tint-degraded"
+              : ""
         } ${flashClass ?? ""}`}
         style={{
           animation: `fade-slide-up 400ms ease-out ${delay}ms forwards`,
@@ -106,8 +118,7 @@ export function EndpointCard({
               )}
               {result.owner && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  <span aria-hidden="true">👤</span>{" "}
-                  {result.owner.name}
+                  <span aria-hidden="true">👤</span> {result.owner.name}
                   {result.owner.telegram && (
                     <>
                       {" · "}
@@ -148,14 +159,18 @@ export function EndpointCard({
         )}
 
         {/* Impact warning — only when DOWN or DEGRADED with impacted services */}
-        {isDown && impactedServices && impactedServices.length > 0 && dependencyGraph && allResults && (
-          <ImpactWarning
-            endpointId={result.id}
-            impactedServices={impactedServices}
-            dependencyGraph={dependencyGraph}
-            results={allResults}
-          />
-        )}
+        {isDown &&
+          impactedServices &&
+          impactedServices.length > 0 &&
+          dependencyGraph &&
+          allResults && (
+            <ImpactWarning
+              endpointId={result.id}
+              impactedServices={impactedServices}
+              dependencyGraph={dependencyGraph}
+              results={allResults}
+            />
+          )}
 
         {/* Endpoint links — always visible on touch devices, hover-reveal on desktop */}
         <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity duration-200">

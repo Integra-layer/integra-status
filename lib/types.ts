@@ -15,7 +15,7 @@ export type CheckType =
   | "explorer-sync"
   | "explorer-deep-health";
 
-export type Status = "UP" | "DOWN" | "DEGRADED";
+export type Status = "UP" | "DOWN" | "DEGRADED" | "DEPLOYING";
 export type Category =
   | "blockchain"
   | "validators"
@@ -102,6 +102,7 @@ export type HealthSummary = {
   up: number;
   degraded: number;
   down: number;
+  deploying: number;
   appGroups: AppGroup[];
   dependencyGraph: Record<
     string,

@@ -1,7 +1,7 @@
 // lib/status-config.ts — Centralized status color and config definitions
 // Single source of truth for UP/DEGRADED/DOWN visual properties.
 
-export type Status = "UP" | "DEGRADED" | "DOWN";
+export type Status = "UP" | "DEGRADED" | "DOWN" | "DEPLOYING";
 
 export const STATUS_COLORS = {
   UP: {
@@ -34,10 +34,21 @@ export const STATUS_COLORS = {
     animation: "pulse-red 1.5s ease-in-out infinite",
     glow: "0 0 8px 2px rgba(239,68,68,0.4)",
   },
+  DEPLOYING: {
+    dot: "bg-blue-500",
+    bg: "bg-blue-500/5 dark:bg-blue-500/10",
+    border: "border-blue-500/30",
+    text: "text-blue-700 dark:text-blue-400",
+    badgeBg: "bg-blue-100 dark:bg-blue-900/30",
+    badgeText: "text-blue-900 dark:text-blue-200",
+    animation: "pulse-blue 1s ease-in-out infinite",
+    glow: "0 0 8px 2px rgba(59,130,246,0.4)",
+  },
 } as const;
 
 export function getWorstStatus(statuses: Status[]): Status {
   if (statuses.includes("DOWN")) return "DOWN";
   if (statuses.includes("DEGRADED")) return "DEGRADED";
+  if (statuses.includes("DEPLOYING")) return "DEPLOYING";
   return "UP";
 }

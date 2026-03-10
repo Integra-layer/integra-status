@@ -15,7 +15,10 @@ type CategorySectionProps = {
   defaultOpen?: boolean;
   blastRadii?: Record<string, number>;
   impactMap?: Record<string, Array<{ id: string; name: string }>>;
-  dependencyGraph?: Record<string, { dependsOn: string[]; requiredBy: string[] }>;
+  dependencyGraph?: Record<
+    string,
+    { dependsOn: string[]; requiredBy: string[] }
+  >;
   allResults?: CheckResult[];
   flashClasses?: Record<string, string>;
 };
@@ -30,12 +33,14 @@ const BORDER_COLOR = {
   UP: "border-l-emerald-500",
   DEGRADED: "border-l-amber-500",
   DOWN: "border-l-red-500",
+  DEPLOYING: "border-l-blue-500",
 } as const;
 
 const SEGMENT_COLOR = {
   UP: "bg-emerald-500",
   DEGRADED: "bg-amber-500",
   DOWN: "bg-red-500",
+  DEPLOYING: "bg-blue-500",
 } as const;
 
 export function CategorySection({
@@ -60,9 +65,16 @@ export function CategorySection({
   const borderColor = BORDER_COLOR[worstStatus];
 
   return (
-    <div id={`category-${name.toLowerCase()}`} className={`border-l-4 ${borderColor} rounded-xl bg-card ${
-      worstStatus === "DOWN" ? "category-tint-down" : worstStatus === "DEGRADED" ? "category-tint-degraded" : "category-tint-up"
-    }`}>
+    <div
+      id={`category-${name.toLowerCase()}`}
+      className={`border-l-4 ${borderColor} rounded-xl bg-card ${
+        worstStatus === "DOWN"
+          ? "category-tint-down"
+          : worstStatus === "DEGRADED"
+            ? "category-tint-degraded"
+            : "category-tint-up"
+      }`}
+    >
       {/* Clickable header */}
       <button
         type="button"
@@ -73,7 +85,10 @@ export function CategorySection({
         aria-controls={`category-${name.toLowerCase()}-content`}
       >
         <div className="flex items-center gap-2.5">
-          <span className="flex-shrink-0 text-muted-foreground" aria-hidden="true">
+          <span
+            className="flex-shrink-0 text-muted-foreground"
+            aria-hidden="true"
+          >
             {icon}
           </span>
           <h2 className="text-base font-semibold">{name}</h2>
@@ -81,7 +96,10 @@ export function CategorySection({
 
         <div className="flex items-center gap-3">
           {/* Status segments bar */}
-          <div className="hidden sm:flex items-center gap-0.5" aria-label={`${upCount} of ${totalCount} operational`}>
+          <div
+            className="hidden sm:flex items-center gap-0.5"
+            aria-label={`${upCount} of ${totalCount} operational`}
+          >
             {results.map((r) => (
               <span
                 key={r.id}
@@ -91,7 +109,11 @@ export function CategorySection({
             ))}
           </div>
 
-          <ProgressRing value={(upCount / totalCount) * 100} size={28} strokeWidth={2.5} />
+          <ProgressRing
+            value={(upCount / totalCount) * 100}
+            size={28}
+            strokeWidth={2.5}
+          />
           <span className="text-sm text-muted-foreground">
             {upCount}/{totalCount} operational
           </span>

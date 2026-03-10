@@ -36,6 +36,13 @@ const STATUS_CONFIG: Record<
     animation: "pulse-red 1.5s ease-in-out infinite",
     glow: "0 0 6px 2px rgba(239,68,68,0.4)",
   },
+  DEPLOYING: {
+    label: "Deploying",
+    bg: "bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-300",
+    dotColor: "bg-blue-500",
+    animation: "pulse-blue 1s ease-in-out infinite",
+    glow: "0 0 6px 2px rgba(59,130,246,0.4)",
+  },
 };
 
 export function StatusBadge({ status, className = "" }: StatusBadgeProps) {

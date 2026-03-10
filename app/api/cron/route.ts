@@ -42,7 +42,18 @@ export async function GET(request: Request) {
   }
 
   try {
-    const results = await checkAll();
+    const rawResults = await checkAll();
+
+    // Override status to DEPLOYING for endpoints with active deploy flag
+    const results: CheckResult[] = [];
+    for (const r of rawResults) {
+      const deployFlag = await kv.get<{ at: number }>(`deploying:${r.id}`);
+      if (deployFlag && r.status !== "UP") {
+        results.push({ ...r, status: "DEPLOYING" as CheckResult["status"] });
+      } else {
+        results.push(r);
+      }
+    }
 
     // Record history
     let hist = loadHistory();
@@ -108,19 +119,19 @@ export async function GET(request: Request) {
       }
     }
 
-    // Send alerts
-    if (transitions.length > 0 && CHANNEL_ID) {
-      if (transitions.length === 1) {
-        const t = transitions[0];
+    // Send alerts (suppress DEPLOYING transitions — intentional restarts, not crashes)
+    const alertable = transitions.filter(
+      (t) => t.toStatus !== "DEPLOYING" && t.fromStatus !== "DEPLOYING",
+    );
+    if (alertable.length > 0 && CHANNEL_ID) {
+      if (alertable.length === 1) {
+        const t = alertable[0];
         if (t.toStatus === "UP") {
           const prev = await kv.get<StoredStatus>(`status:${t.result.id}`);
           const downtimeSec = prev?.at
             ? Math.round((Date.now() - prev.at) / 1000)
             : 0;
-          await sendMessage(
-            CHANNEL_ID,
-            formatRecovery(t.result, downtimeSec),
-          );
+          await sendMessage(CHANNEL_ID, formatRecovery(t.result, downtimeSec));
         } else {
           await sendMessage(
             CHANNEL_ID,
@@ -131,7 +142,7 @@ export async function GET(request: Request) {
           );
         }
       } else {
-        await sendMessage(CHANNEL_ID, formatGroupedAlert(transitions));
+        await sendMessage(CHANNEL_ID, formatGroupedAlert(alertable));
       }
     }
 
@@ -153,6 +164,7 @@ export async function GET(request: Request) {
           up: results.filter((r) => r.status === "UP").length,
           degraded: results.filter((r) => r.status === "DEGRADED").length,
           down: results.filter((r) => r.status === "DOWN").length,
+          deploying: results.filter((r) => r.status === "DEPLOYING").length,
           appGroups: APP_GROUPS,
           dependencyGraph: {},
           impactMap: {},
@@ -166,10 +178,8 @@ export async function GET(request: Request) {
           },
         };
 
-        const categoryCounts: Record<
-          string,
-          { up: number; total: number }
-        > = {};
+        const categoryCounts: Record<string, { up: number; total: number }> =
+          {};
         for (const cat of CATEGORIES) {
           const catResults = results.filter((r) => r.category === cat);
           categoryCounts[cat] = {

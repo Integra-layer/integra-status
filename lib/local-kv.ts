@@ -51,10 +51,18 @@ export const localKv = {
     save(store);
   },
 
+  async del(key: string): Promise<void> {
+    const store = load();
+    delete store[key];
+    save(store);
+  },
+
   async sadd(key: string, ...members: string[]): Promise<number> {
     const store = load();
     const entry = store[key];
-    const current: string[] = Array.isArray(entry?.value) ? (entry.value as string[]) : [];
+    const current: string[] = Array.isArray(entry?.value)
+      ? (entry.value as string[])
+      : [];
     let added = 0;
     for (const m of members) {
       if (!current.includes(m)) {

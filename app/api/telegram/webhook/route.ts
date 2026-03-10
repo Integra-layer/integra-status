@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { localKv as kv } from "@/lib/local-kv";
 import { checkAll, runCheck } from "@/lib/health";
-import { getEndpoint, getEndpoints, CATEGORIES, APP_GROUPS } from "@/lib/health-config";
+import {
+  getEndpoint,
+  getEndpoints,
+  CATEGORIES,
+  APP_GROUPS,
+} from "@/lib/health-config";
 import { loadHistory, getSparklines, getUptimes } from "@/lib/history";
 import { sendMessage, editMessage, answerCallbackQuery } from "@/lib/telegram";
 import {
@@ -322,6 +327,7 @@ function buildSummary(results: CheckResult[]): HealthSummary {
     up: results.filter((r) => r.status === "UP").length,
     degraded: results.filter((r) => r.status === "DEGRADED").length,
     down: results.filter((r) => r.status === "DOWN").length,
+    deploying: results.filter((r) => r.status === "DEPLOYING").length,
     appGroups: APP_GROUPS,
     dependencyGraph: {},
     impactMap: {},

@@ -6,6 +6,7 @@ interface SummaryBarProps {
   up: number;
   degraded: number;
   down: number;
+  deploying?: number;
 }
 
 function useAnimatedCounter(target: number, durationMs = 600): number {
@@ -42,6 +43,7 @@ function getOverallStatus(
   up: number,
   degraded: number,
   down: number,
+  deploying: number,
 ): { text: string; bg: string; textColor: string } {
   if (down > 0) {
     return {
@@ -54,6 +56,13 @@ function getOverallStatus(
     return {
       text: "Partial Degradation",
       bg: "bg-amber-500",
+      textColor: "text-white",
+    };
+  }
+  if (deploying > 0) {
+    return {
+      text: `Deployment in Progress (${deploying} service${deploying > 1 ? "s" : ""})`,
+      bg: "bg-blue-500",
       textColor: "text-white",
     };
   }
@@ -95,17 +104,27 @@ const CARDS = [
   },
 ] as const;
 
-export function SummaryBar({ up, degraded, down }: SummaryBarProps) {
-  const total = up + degraded + down;
+export function SummaryBar({
+  up,
+  degraded,
+  down,
+  deploying = 0,
+}: SummaryBarProps) {
+  const total = up + degraded + down + deploying;
   const values = { up, degraded, down, total };
 
   const animUp = useAnimatedCounter(up);
   const animDegraded = useAnimatedCounter(degraded);
   const animDown = useAnimatedCounter(down);
   const animTotal = useAnimatedCounter(total);
-  const animValues = { up: animUp, degraded: animDegraded, down: animDown, total: animTotal };
+  const animValues = {
+    up: animUp,
+    degraded: animDegraded,
+    down: animDown,
+    total: animTotal,
+  };
 
-  const overall = getOverallStatus(up, degraded, down);
+  const overall = getOverallStatus(up, degraded, down, deploying);
 
   return (
     <div className="sticky top-0 z-40 w-full">
@@ -133,9 +152,10 @@ export function SummaryBar({ up, degraded, down }: SummaryBarProps) {
                       className={`inline-block h-2.5 w-2.5 rounded-full ${card.dotColor}`}
                       style={{
                         animation: card.dotAnim,
-                        boxShadow: values[card.key] > 0
-                          ? `0 0 8px 2px ${card.key === "up" ? "rgba(16,185,129,0.4)" : card.key === "degraded" ? "rgba(245,158,11,0.4)" : "rgba(239,68,68,0.4)"}`
-                          : "none",
+                        boxShadow:
+                          values[card.key] > 0
+                            ? `0 0 8px 2px ${card.key === "up" ? "rgba(16,185,129,0.4)" : card.key === "degraded" ? "rgba(245,158,11,0.4)" : "rgba(239,68,68,0.4)"}`
+                            : "none",
                       }}
                       aria-hidden="true"
                     />

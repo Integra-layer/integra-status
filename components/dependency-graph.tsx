@@ -9,13 +9,28 @@ type DependencyGraphProps = {
   dependsOn: string[];
   requiredBy: string[];
   results: CheckResult[];
-  dependencyGraph?: Record<string, { dependsOn: string[]; requiredBy: string[] }>;
+  dependencyGraph?: Record<
+    string,
+    { dependsOn: string[]; requiredBy: string[] }
+  >;
 };
 
-const STATUS_COLORS: Record<Status, { fill: string; stroke: string; glow: string }> = {
+const STATUS_COLORS: Record<
+  Status,
+  { fill: string; stroke: string; glow: string }
+> = {
   UP: { fill: "#d1fae5", stroke: "#10b981", glow: "rgba(16,185,129,0.3)" },
-  DEGRADED: { fill: "#fef3c7", stroke: "#f59e0b", glow: "rgba(245,158,11,0.3)" },
+  DEGRADED: {
+    fill: "#fef3c7",
+    stroke: "#f59e0b",
+    glow: "rgba(245,158,11,0.3)",
+  },
   DOWN: { fill: "#fee2e2", stroke: "#ef4444", glow: "rgba(239,68,68,0.3)" },
+  DEPLOYING: {
+    fill: "#dbeafe",
+    stroke: "#3b82f6",
+    glow: "rgba(59,130,246,0.3)",
+  },
 };
 
 const NODE_WIDTH = 150;
@@ -52,7 +67,9 @@ export function DependencyGraph({
     // Left column: upstream dependencies
     dependsOn.forEach((depId, i) => {
       const r = resultMap.get(depId);
-      const br = dependencyGraph ? getBlastRadius(depId, dependencyGraph).length : 0;
+      const br = dependencyGraph
+        ? getBlastRadius(depId, dependencyGraph).length
+        : 0;
       graphNodes.push({
         id: depId,
         name: r?.name ?? depId,
@@ -69,7 +86,9 @@ export function DependencyGraph({
     const currentResult = resultMap.get(currentId);
     const centerRow = Math.max(dependsOn.length, requiredBy.length, 1);
     const centerY = PADDING + ((centerRow - 1) * ROW_GAP) / 2;
-    const currentBr = dependencyGraph ? getBlastRadius(currentId, dependencyGraph).length : 0;
+    const currentBr = dependencyGraph
+      ? getBlastRadius(currentId, dependencyGraph).length
+      : 0;
     graphNodes.push({
       id: currentId,
       name: currentResult?.name ?? currentId,
@@ -84,7 +103,9 @@ export function DependencyGraph({
     // Right column: downstream dependents
     requiredBy.forEach((depId, i) => {
       const r = resultMap.get(depId);
-      const br = dependencyGraph ? getBlastRadius(depId, dependencyGraph).length : 0;
+      const br = dependencyGraph
+        ? getBlastRadius(depId, dependencyGraph).length
+        : 0;
       graphNodes.push({
         id: depId,
         name: r?.name ?? depId,
@@ -117,7 +138,10 @@ export function DependencyGraph({
         const ey = centerNode.y + NODE_HEIGHT / 2;
         const cpx = sx + (ex - sx) * 0.5;
         graphEdges.push({
-          fromX: sx, fromY: sy, toX: ex, toY: ey,
+          fromX: sx,
+          fromY: sy,
+          toX: ex,
+          toY: ey,
           path: `M ${sx} ${sy} C ${cpx} ${sy}, ${cpx} ${ey}, ${ex} ${ey}`,
         });
       }
@@ -132,7 +156,10 @@ export function DependencyGraph({
         const ey = depNode.y + NODE_HEIGHT / 2;
         const cpx = sx + (ex - sx) * 0.5;
         graphEdges.push({
-          fromX: sx, fromY: sy, toX: ex, toY: ey,
+          fromX: sx,
+          fromY: sy,
+          toX: ex,
+          toY: ey,
           path: `M ${sx} ${sy} C ${cpx} ${sy}, ${cpx} ${ey}, ${ex} ${ey}`,
         });
       }
@@ -167,10 +194,12 @@ export function DependencyGraph({
     // Check if there's an edge between them
     return edges.some(
       (e) =>
-        (nodes.find((n) => n.x === e.fromX - NODE_WIDTH || n.x === e.fromX)?.id === hoveredId &&
+        (nodes.find((n) => n.x === e.fromX - NODE_WIDTH || n.x === e.fromX)
+          ?.id === hoveredId &&
           nodes.find((n) => n.x === e.toX)?.id === nodeId) ||
         (nodes.find((n) => n.x === e.toX)?.id === hoveredId &&
-          nodes.find((n) => n.x === e.fromX - NODE_WIDTH || n.x === e.fromX)?.id === nodeId),
+          nodes.find((n) => n.x === e.fromX - NODE_WIDTH || n.x === e.fromX)
+            ?.id === nodeId),
     );
   }
 
@@ -233,7 +262,10 @@ export function DependencyGraph({
               onMouseLeave={() => setHoveredId(null)}
               style={{ cursor: "pointer" }}
             >
-              <a href={`/service/${node.id}`} aria-label={`${node.name} — ${node.status}`}>
+              <a
+                href={`/service/${node.id}`}
+                aria-label={`${node.name} — ${node.status}`}
+              >
                 {/* Glow effect */}
                 {(isCurrent || isHover) && (
                   <rect

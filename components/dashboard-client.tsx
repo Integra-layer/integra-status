@@ -3,7 +3,14 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Blocks, Shield, Server, Globe, Link2, ChevronDown } from "lucide-react";
+import {
+  Blocks,
+  Shield,
+  Server,
+  Globe,
+  Link2,
+  ChevronDown,
+} from "lucide-react";
 import { Header } from "@/components/header";
 import { SummaryBar } from "@/components/summary-bar";
 import { SearchBar, type ViewMode } from "@/components/search-bar";
@@ -15,8 +22,20 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { getAllBlastRadii } from "@/lib/graph-utils";
 import { capitalize } from "@/lib/utils";
 
-const NetworkGraph = dynamic(() => import("@/components/network-graph").then(m => ({ default: m.NetworkGraph })), { ssr: false });
-const Celebration = dynamic(() => import("@/components/celebration").then(m => ({ default: m.Celebration })), { ssr: false });
+const NetworkGraph = dynamic(
+  () =>
+    import("@/components/network-graph").then((m) => ({
+      default: m.NetworkGraph,
+    })),
+  { ssr: false },
+);
+const Celebration = dynamic(
+  () =>
+    import("@/components/celebration").then((m) => ({
+      default: m.Celebration,
+    })),
+  { ssr: false },
+);
 import type { HealthSummary, Category, Environment } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -44,7 +63,9 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
-  const [activeEnvironment, setActiveEnvironment] = useState<Environment | "all">("all");
+  const [activeEnvironment, setActiveEnvironment] = useState<
+    Environment | "all"
+  >("all");
   const [showTimeline, setShowTimeline] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("integra-timeline-open") === "true";
@@ -54,7 +75,9 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("integra-view-mode") as ViewMode) || "detailed";
+      return (
+        (localStorage.getItem("integra-view-mode") as ViewMode) || "detailed"
+      );
     }
     return "detailed";
   });
@@ -85,7 +108,10 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
       if (old && old !== r.status) {
         if (r.status === "DOWN" || r.status === "DEGRADED") {
           flashes[r.id] = "status-flash-down";
-        } else if (r.status === "UP" && (old === "DOWN" || old === "DEGRADED")) {
+        } else if (
+          r.status === "UP" &&
+          (old === "DOWN" || old === "DEGRADED")
+        ) {
           flashes[r.id] = "status-flash-recovery";
         }
       }
@@ -104,7 +130,8 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
   useEffect(() => {
     function handleScroll() {
       const scrollTop = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const docHeight =
+        document.documentElement.scrollHeight - window.innerHeight;
       setScrollProgress(docHeight > 0 ? (scrollTop / docHeight) * 100 : 0);
     }
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -194,7 +221,12 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
       <Celebration allUp={allUp} />
 
       <Header lastChecked={data.timestamp} endpointCount={data.total} />
-      <SummaryBar up={data.up} degraded={data.degraded} down={data.down} />
+      <SummaryBar
+        up={data.up}
+        degraded={data.degraded}
+        down={data.down}
+        deploying={data.deploying}
+      />
 
       {/* Screen reader announcement for critical alerts */}
       {data.down > 0 && (
@@ -204,93 +236,102 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
       )}
 
       <ErrorBoundary>
-      <main id="main" className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <div className="mb-6">
-          <SearchBar
-            endpointCount={data.total}
-            categories={categories}
-            activeCategories={activeCategories}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onCategoryToggle={toggleCategory}
-            activeEnvironment={activeEnvironment}
-            onEnvironmentChange={setActiveEnvironment}
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-          />
-        </div>
+        <main id="main" className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+          <div className="mb-6">
+            <SearchBar
+              endpointCount={data.total}
+              categories={categories}
+              activeCategories={activeCategories}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onCategoryToggle={toggleCategory}
+              activeEnvironment={activeEnvironment}
+              onEnvironmentChange={setActiveEnvironment}
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+            />
+          </div>
 
-        {/* Network graph — visible in both views */}
-        <div className="mb-6">
-          <NetworkGraph data={data} compact={viewMode === "simple"} />
-        </div>
+          {/* Network graph — visible in both views */}
+          <div className="mb-6">
+            <NetworkGraph data={data} compact={viewMode === "simple"} />
+          </div>
 
-        {viewMode === "simple" ? (
-          <SimpleView data={data} categories={categories} />
-        ) : (
-          <>
-            {/* Category sections */}
-            <div className="space-y-4">
-              {categoryResults.map((cat) => (
-                <CategorySection
-                  key={cat.name}
-                  name={cat.name}
-                  icon={cat.icon}
-                  results={cat.results}
-                  sparklines={data.history.sparklines}
-                  uptimes={data.history.uptimes}
-                  defaultOpen={cat.results.some(
-                    (r) => r.status === "DOWN" || r.status === "DEGRADED",
-                  )}
-                  blastRadii={blastRadii}
-                  impactMap={data.impactMap}
-                  dependencyGraph={data.dependencyGraph}
-                  allResults={data.results}
-                  flashClasses={flashClasses}
-                />
-              ))}
+          {viewMode === "simple" ? (
+            <SimpleView data={data} categories={categories} />
+          ) : (
+            <>
+              {/* Category sections */}
+              <div className="space-y-4">
+                {categoryResults.map((cat) => (
+                  <CategorySection
+                    key={cat.name}
+                    name={cat.name}
+                    icon={cat.icon}
+                    results={cat.results}
+                    sparklines={data.history.sparklines}
+                    uptimes={data.history.uptimes}
+                    defaultOpen={cat.results.some(
+                      (r) => r.status === "DOWN" || r.status === "DEGRADED",
+                    )}
+                    blastRadii={blastRadii}
+                    impactMap={data.impactMap}
+                    dependencyGraph={data.dependencyGraph}
+                    allResults={data.results}
+                    flashClasses={flashClasses}
+                  />
+                ))}
 
-              {categoryResults.length === 0 && (
-                <div className="rounded-xl border border-border-strong/30 bg-surface-card p-8 text-center">
-                  <p className="text-sm text-text-muted">
-                    No endpoints match your search.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Incident timeline (collapsible) */}
-            {recentIncidents.length > 0 && (
-              <div className="mt-6 rounded-xl border border-border-strong/30 bg-surface-card dark:bg-surface-dark-card overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setShowTimeline((p) => {
-                    const next = !p;
-                    localStorage.setItem("integra-timeline-open", String(next));
-                    return next;
-                  })}
-                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors cursor-pointer"
-                >
-                  <h2 className="text-sm font-semibold">Recent Incidents</h2>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {recentIncidents.length} event{recentIncidents.length !== 1 ? "s" : ""}
-                    </span>
-                    <ChevronDown
-                      className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${showTimeline ? "rotate-180" : ""}`}
-                    />
-                  </div>
-                </button>
-                {showTimeline && (
-                  <div className="border-t border-border-strong/20 p-4">
-                    <IncidentTimeline incidents={recentIncidents} endpointNames={endpointNames} />
+                {categoryResults.length === 0 && (
+                  <div className="rounded-xl border border-border-strong/30 bg-surface-card p-8 text-center">
+                    <p className="text-sm text-text-muted">
+                      No endpoints match your search.
+                    </p>
                   </div>
                 )}
               </div>
-            )}
-          </>
-        )}
-      </main>
+
+              {/* Incident timeline (collapsible) */}
+              {recentIncidents.length > 0 && (
+                <div className="mt-6 rounded-xl border border-border-strong/30 bg-surface-card dark:bg-surface-dark-card overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowTimeline((p) => {
+                        const next = !p;
+                        localStorage.setItem(
+                          "integra-timeline-open",
+                          String(next),
+                        );
+                        return next;
+                      })
+                    }
+                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors cursor-pointer"
+                  >
+                    <h2 className="text-sm font-semibold">Recent Incidents</h2>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {recentIncidents.length} event
+                        {recentIncidents.length !== 1 ? "s" : ""}
+                      </span>
+                      <ChevronDown
+                        className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${showTimeline ? "rotate-180" : ""}`}
+                      />
+                    </div>
+                  </button>
+                  {showTimeline && (
+                    <div className="border-t border-border-strong/20 p-4">
+                      <IncidentTimeline
+                        incidents={recentIncidents}
+                        endpointNames={endpointNames}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </main>
       </ErrorBoundary>
 
       <Footer endpointCount={data.total} categoryCount={categories.length} />

@@ -31,13 +31,17 @@ export function formatAlert(
       ? "\uD83D\uDD34"
       : transition.toStatus === "DEGRADED"
         ? "\uD83D\uDFE1"
-        : "\uD83D\uDFE2";
+        : transition.toStatus === "DEPLOYING"
+          ? "\uD83D\uDD35"
+          : "\uD83D\uDFE2";
   const label =
     transition.toStatus === "DOWN"
       ? "DOWN"
       : transition.toStatus === "DEGRADED"
         ? "DEGRADED"
-        : "RECOVERED";
+        : transition.toStatus === "DEPLOYING"
+          ? "DEPLOYING"
+          : "RECOVERED";
 
   const lines = [
     `${emoji} <b>${label}: ${result.name}</b>`,
@@ -125,7 +129,7 @@ export function formatEndpointDetail(
         : null,
     ``,
     `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501`,
-    `Status: ${result.status === "UP" ? "\uD83D\uDFE2" : result.status === "DEGRADED" ? "\uD83D\uDFE1" : "\uD83D\uDD34"} <b>${result.status}</b>`,
+    `Status: ${result.status === "UP" ? "\uD83D\uDFE2" : result.status === "DEGRADED" ? "\uD83D\uDFE1" : result.status === "DEPLOYING" ? "\uD83D\uDD35" : "\uD83D\uDD34"} <b>${result.status}</b>`,
     `Response: <code>${result.responseTimeMs}ms</code>`,
     uptime != null
       ? `Uptime: <code>${(uptime * 100).toFixed(1)}%</code>`
@@ -161,7 +165,9 @@ export function formatCategoryDetail(
         ? "\uD83D\uDFE2"
         : r.status === "DEGRADED"
           ? "\uD83D\uDFE1"
-          : "\uD83D\uDD34";
+          : r.status === "DEPLOYING"
+            ? "\uD83D\uDD35"
+            : "\uD83D\uDD34";
     lines.push(`${dot} ${r.name} \u2014 <code>${r.responseTimeMs}ms</code>`);
   }
   return lines.join("\n");
@@ -185,7 +191,9 @@ export function formatGroupedAlert(
         ? "\uD83D\uDD34"
         : t.toStatus === "DEGRADED"
           ? "\uD83D\uDFE1"
-          : "\uD83D\uDFE2";
+          : t.toStatus === "DEPLOYING"
+            ? "\uD83D\uDD35"
+            : "\uD83D\uDFE2";
     lines.push(
       `${emoji} ${t.result.name}: ${t.fromStatus} \u2192 ${t.toStatus}`,
     );
@@ -227,10 +235,7 @@ export function formatHelp(): string {
   ].join("\n");
 }
 
-export function asciiSparkline(
-  data: (number | null)[],
-  width: number,
-): string {
+export function asciiSparkline(data: (number | null)[], width: number): string {
   const chars = "\u2581\u2582\u2583\u2584\u2585\u2586\u2587\u2588";
   const values = data.slice(-width);
   const valid = values.filter((v): v is number => v !== null && v > 0);

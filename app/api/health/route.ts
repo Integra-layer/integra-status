@@ -60,6 +60,7 @@ export async function GET(request: Request) {
       up: results.filter((r) => r.status === "UP").length,
       degraded: results.filter((r) => r.status === "DEGRADED").length,
       down: results.filter((r) => r.status === "DOWN").length,
+      deploying: results.filter((r) => r.status === "DEPLOYING").length,
       appGroups: APP_GROUPS,
       dependencyGraph: getDependencyGraph(),
       impactMap,
