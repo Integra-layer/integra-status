@@ -12,7 +12,8 @@ export type CheckType =
   | "deep-health"
   | "graphql"
   | "cosmos-peer-check"
-  | "explorer-sync";
+  | "explorer-sync"
+  | "explorer-deep-health";
 
 export type Status = "UP" | "DOWN" | "DEGRADED";
 export type Category =

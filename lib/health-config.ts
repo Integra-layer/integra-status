@@ -248,6 +248,29 @@ const explorerSyncIssues: CommonIssue[] = [
   },
 ];
 
+const explorerDeepHealthIssues: CommonIssue[] = [
+  {
+    cause: "Callisto workers crashed or disconnected",
+    fix: "Check running containers: docker ps; restart workers: docker compose restart worker-high worker-medium worker-low",
+  },
+  {
+    cause: "Schema drift — missing columns causing silent INSERT failures",
+    fix: "Check table schema: docker exec postgres psql -U postgres -d ethernal -c '\\d block'; run pending migrations",
+  },
+  {
+    cause: "Block gaps from indexer crash during sync",
+    fix: "Detect gaps: SELECT height FROM block ORDER BY height DESC LIMIT 1000; backfill via job queue API",
+  },
+  {
+    cause: "Receipt sync blocked by transaction_receipts schema mismatch",
+    fix: "Check transaction_receipts table exists and has correct columns; re-run receipt sync jobs",
+  },
+  {
+    cause: "Indexer hung but latest height cached (stale write)",
+    fix: "Restart Callisto: docker compose restart callisto; verify blocks advancing: SELECT MAX(height) FROM block",
+  },
+];
+
 // ---------------------------------------------------------------------------
 // App groups (for minimal view)
 // ---------------------------------------------------------------------------
@@ -287,6 +310,7 @@ export const APP_GROUPS: AppGroup[] = [
       "testnet-cosmos-rest",
       "explorer-mainnet-sync",
       "explorer-testnet-sync",
+      "explorer-mainnet-deep-health",
       "explorer-mainnet-backend",
       "explorer-testnet-backend",
     ],
@@ -2117,6 +2141,33 @@ export const ENDPOINTS: Endpoint[] = [
     },
     commonIssues: explorerSyncIssues,
     tags: ["Node.js", "BullMQ", "Docker"],
+  },
+
+  // -- Explorer Deep Health (Callisto/Hasura integrity) ----------------------
+  {
+    id: "explorer-mainnet-deep-health",
+    name: "Mainnet Explorer Deep Health",
+    category: "blockchain",
+    environment: "prod",
+    url: "https://scan.integralayer.com/v1/graphql",
+    checkType: "explorer-deep-health",
+    timeout: 20000,
+    enabled: true,
+    dependsOn: ["explorer-mainnet-sync", "explorer-graphql"],
+    impacts: ["explorer-v2"],
+    impactDescription:
+      "Explorer v2 data integrity issues — gaps, missing transactions, or stale indexer",
+    description:
+      "Deep integrity checks: block gaps, tx completeness, write freshness, receipt completeness",
+    richDescription:
+      "Runs 4 sub-checks against the Callisto/Hasura database via a single batched GraphQL query: (1) Block gap detection scans last 1000 blocks for missing heights, (2) Transaction completeness verifies num_txs matches actual indexed count, (3) Last write freshness detects hung indexers by checking block timestamp age (DOWN >10min, DEGRADED >5min), (4) Receipt completeness samples recent transactions for missing receipt data. The worst sub-check status becomes the endpoint status. Designed to catch the exact failure modes encountered in production: silent schema drift, crashed workers, and stale cached heights.",
+    owner: OWNERS.adam,
+    links: {
+      endpoint: "https://scan.integralayer.com",
+      repo: "https://github.com/Integra-layer/integra-explorer",
+    },
+    commonIssues: explorerDeepHealthIssues,
+    tags: ["Callisto", "Hasura", "PostgreSQL", "Deep Health"],
   },
 ];
 

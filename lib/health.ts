@@ -639,6 +639,216 @@ async function checkExplorerSync(ep: Endpoint): Promise<CheckResult> {
   return buildResult(ep, "UP", Date.now() - start, details);
 }
 
+async function checkExplorerDeepHealth(ep: Endpoint): Promise<CheckResult> {
+  const start = Date.now();
+  const details: Record<string, unknown> = {};
+  const subChecks: Array<{ name: string; status: Status; detail: string }> = [];
+
+  // All 4 sub-checks run as a single batched GraphQL request to Hasura
+  const query = `{
+    block_gap: block(order_by: {height: desc}, limit: 1000) { height }
+    tx_completeness: block(
+      where: { num_txs: { _gt: 0 } }
+      order_by: { height: desc }
+      limit: 50
+    ) { height num_txs transactions_aggregate { aggregate { count } } }
+    last_write: block(order_by: {height: desc}, limit: 1) { height timestamp }
+    receipt_check: transaction(
+      order_by: { id: desc }
+      limit: 100
+    ) { hash receipt { transactionHash } }
+  }`;
+
+  let data: Record<string, unknown>;
+  try {
+    const res = await httpRequest(ep.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+      timeout: ep.timeout,
+    });
+    if (res.statusCode < 200 || res.statusCode >= 400)
+      throw new Error(`HTTP ${res.statusCode}`);
+    const parsed = JSON.parse(res.body);
+    if (parsed.errors)
+      throw new Error(parsed.errors[0]?.message || "GraphQL errors");
+    data = parsed.data;
+  } catch (err: unknown) {
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      `Hasura unreachable: ${(err as Error).message}`,
+    );
+  }
+
+  // Sub-check 1: Block gap detection
+  const blocks = data.block_gap as Array<{ height: number }>;
+  if (blocks && blocks.length > 1) {
+    let gaps = 0;
+    const gapRanges: string[] = [];
+    for (let i = 0; i < blocks.length - 1; i++) {
+      const expected = blocks[i].height - 1;
+      const actual = blocks[i + 1].height;
+      if (expected !== actual) {
+        gaps += expected - actual;
+        if (gapRanges.length < 3) gapRanges.push(`${actual + 1}-${expected}`);
+      }
+    }
+    details.gapsInLast1000 = gaps;
+    if (gaps > 0) {
+      subChecks.push({
+        name: "block_gaps",
+        status: "DEGRADED",
+        detail: `${gaps} missing blocks in last 1000 (${gapRanges.join(", ")}${gapRanges.length < gaps ? "..." : ""})`,
+      });
+    } else {
+      subChecks.push({
+        name: "block_gaps",
+        status: "UP",
+        detail: "No gaps in last 1000 blocks",
+      });
+    }
+  } else {
+    subChecks.push({
+      name: "block_gaps",
+      status: "UP",
+      detail: "Insufficient data to check gaps",
+    });
+  }
+
+  // Sub-check 2: Transaction completeness
+  const txBlocks = data.tx_completeness as Array<{
+    height: number;
+    num_txs: number;
+    transactions_aggregate: { aggregate: { count: number } };
+  }>;
+  if (txBlocks && txBlocks.length > 0) {
+    let mismatches = 0;
+    for (const b of txBlocks) {
+      const declared = b.num_txs;
+      const actual = b.transactions_aggregate?.aggregate?.count ?? 0;
+      if (declared !== actual) mismatches++;
+    }
+    details.txMismatches = mismatches;
+    details.txBlocksChecked = txBlocks.length;
+    if (mismatches > 0) {
+      subChecks.push({
+        name: "tx_completeness",
+        status: "DEGRADED",
+        detail: `${mismatches}/${txBlocks.length} blocks have tx count mismatch (num_txs != actual)`,
+      });
+    } else {
+      subChecks.push({
+        name: "tx_completeness",
+        status: "UP",
+        detail: `All ${txBlocks.length} sampled blocks have correct tx counts`,
+      });
+    }
+  } else {
+    subChecks.push({
+      name: "tx_completeness",
+      status: "UP",
+      detail: "No blocks with txs to check",
+    });
+  }
+
+  // Sub-check 3: Last write freshness
+  const lastBlock = data.last_write as Array<{
+    height: number;
+    timestamp: string;
+  }>;
+  if (lastBlock && lastBlock.length > 0) {
+    const blockTime = new Date(lastBlock[0].timestamp).getTime();
+    const ageSec = (Date.now() - blockTime) / 1000;
+    details.lastIndexedHeight = lastBlock[0].height;
+    details.lastIndexedAgeSec = Math.round(ageSec);
+    if (ageSec > 600) {
+      subChecks.push({
+        name: "write_freshness",
+        status: "DOWN",
+        detail: `Last indexed block is ${Math.round(ageSec / 60)} min old (height ${lastBlock[0].height})`,
+      });
+    } else if (ageSec > 300) {
+      subChecks.push({
+        name: "write_freshness",
+        status: "DEGRADED",
+        detail: `Last indexed block is ${Math.round(ageSec / 60)} min old`,
+      });
+    } else {
+      subChecks.push({
+        name: "write_freshness",
+        status: "UP",
+        detail: `Last indexed block ${Math.round(ageSec)}s ago (height ${lastBlock[0].height})`,
+      });
+    }
+  } else {
+    subChecks.push({
+      name: "write_freshness",
+      status: "DOWN",
+      detail: "No blocks in database",
+    });
+  }
+
+  // Sub-check 4: Receipt completeness
+  const txs = data.receipt_check as Array<{
+    hash: string;
+    receipt: { transactionHash: string } | null;
+  }>;
+  if (txs && txs.length > 0) {
+    const missing = txs.filter((t) => !t.receipt).length;
+    const pct = Math.round((missing / txs.length) * 100);
+    details.receiptsMissing = missing;
+    details.receiptsChecked = txs.length;
+    details.receiptsMissingPct = pct;
+    if (pct > 20) {
+      subChecks.push({
+        name: "receipt_completeness",
+        status: "DEGRADED",
+        detail: `${missing}/${txs.length} (${pct}%) transactions missing receipts`,
+      });
+    } else {
+      subChecks.push({
+        name: "receipt_completeness",
+        status: "UP",
+        detail: `${txs.length - missing}/${txs.length} transactions have receipts`,
+      });
+    }
+  } else {
+    subChecks.push({
+      name: "receipt_completeness",
+      status: "UP",
+      detail: "No transactions to check",
+    });
+  }
+
+  // Worst sub-check status becomes endpoint status
+  details.subChecks = subChecks;
+  let worstStatus: Status = "UP";
+  for (const sc of subChecks) {
+    if (sc.status === "DOWN") {
+      worstStatus = "DOWN";
+      break;
+    }
+    if (sc.status === "DEGRADED") worstStatus = "DEGRADED";
+  }
+
+  const failedChecks = subChecks.filter((sc) => sc.status !== "UP");
+  const error =
+    failedChecks.length > 0
+      ? failedChecks.map((sc) => `${sc.name}: ${sc.detail}`).join("; ")
+      : null;
+
+  return buildResult(
+    ep,
+    worstStatus,
+    Date.now() - start,
+    details,
+    error || undefined,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Check dispatch
 // ---------------------------------------------------------------------------
@@ -658,6 +868,7 @@ const CHECK_FNS: Record<CheckType, CheckFn> = {
   graphql: checkGraphql,
   "cosmos-peer-check": checkCosmosPeer,
   "explorer-sync": checkExplorerSync,
+  "explorer-deep-health": checkExplorerDeepHealth,
 };
 
 export async function runCheck(ep: Endpoint): Promise<CheckResult> {
