@@ -348,8 +348,8 @@ export const APP_GROUPS: AppGroup[] = [
     id: "validators",
     name: "Validators",
     icon: "\u26A1",
-    description: "Mainnet validator nodes for block production and consensus",
-    endpoints: ["validator-1", "validator-2", "validator-3", "validator-adam"],
+    description: "Mainnet validator node for block production and consensus",
+    endpoints: ["validator-adam"],
   },
   {
     id: "sites",
@@ -400,7 +400,7 @@ export const ENDPOINTS: Endpoint[] = [
     name: "Mainnet EVM RPC",
     category: "blockchain",
     environment: "prod",
-    url: "https://adamboudj.integralayer.com/rpc",
+    url: "https://mainnet.integralayer.com/evm",
     checkType: "evm-rpc",
     timeout: 10000,
     enabled: true,
@@ -410,12 +410,12 @@ export const ENDPOINTS: Endpoint[] = [
     impactDescription:
       "Dashboard API and Explorer v2 lose EVM data — balances and transactions unavailable",
     description:
-      "EVM JSON-RPC for mainnet (chain 26217) — wallet balances, transactions, smart contracts",
+      "EVM JSON-RPC for mainnet (chain 26217) — Hetzner gateway via path routing",
     richDescription:
-      "The primary Ethereum-compatible JSON-RPC node for Integra mainnet (chain ID 26217), served via Caddy reverse proxy on Adam's AWS EC2 validator node (3.92.110.107). It serves all on-chain EVM data including wallet balances, token transfers, smart contract calls, and transaction receipts. The Dashboard API and Explorer v2 depend on this directly. Caddy handles TLS termination and path-based routing (/rpc strips prefix before proxying to port 8545).",
+      "EVM JSON-RPC for the Integra mainnet (chain ID 26217), served via Caddy path routing on the mainnet Hetzner gateway (89.167.88.24). Serves all on-chain EVM data including wallet balances, token transfers, smart contract calls, and transaction receipts.",
     owner: OWNERS.adam,
     links: {
-      endpoint: "https://adamboudj.integralayer.com/rpc",
+      endpoint: "https://mainnet.integralayer.com/evm",
       docs: "https://docs.integralayer.com/nodes",
     },
     commonIssues: evmRpcCaddyIssues,
@@ -457,24 +457,24 @@ export const ENDPOINTS: Endpoint[] = [
     name: "Mainnet Cosmos RPC",
     category: "blockchain",
     environment: "prod",
-    url: "https://rpc.integralayer.com",
+    url: "https://mainnet.integralayer.com/rpc",
     checkType: "cosmos-rpc",
     timeout: 10000,
     enabled: true,
-    dependsOn: [],
+    dependsOn: ["portal-mainnet"],
     impacts: ["explorer-mainnet"],
     impactDescription: "Mainnet explorer loses real-time block data",
     description:
-      "Cosmos RPC for mainnet — block data, transaction broadcasting, validator info",
+      "Cosmos RPC for mainnet — Hetzner gateway via path routing",
     richDescription:
-      "The primary CometBFT RPC endpoint for the Integra mainnet, handling block queries, transaction broadcasting, validator set lookups, and consensus state. This is the backbone of the mainnet block explorer — it sources all real-time block data, transaction details, and validator information displayed to users. The explorer, staking interfaces, and governance tooling all query this node. Downtime means the explorer shows stale data and users cannot broadcast Cosmos-side transactions.",
+      "CometBFT RPC for the Integra mainnet, served via Caddy path routing on the mainnet Hetzner gateway (89.167.88.24). Handles block queries, transaction broadcasting, validator set lookups, and consensus state. Powers the mainnet block explorer with live chain data.",
     owner: OWNERS.adam,
     links: {
-      endpoint: "https://rpc.integralayer.com",
+      endpoint: "https://mainnet.integralayer.com/rpc",
       docs: "https://docs.integralayer.com/nodes",
     },
-    commonIssues: cosmosRpcIssues,
-    tags: ["Tendermint", "CometBFT"],
+    commonIssues: cosmosRpcCaddyIssues,
+    tags: ["CometBFT", "Caddy", "Hetzner"],
   },
   {
     id: "mainnet-cosmos-rpc2",
@@ -503,24 +503,24 @@ export const ENDPOINTS: Endpoint[] = [
     name: "Mainnet REST/LCD",
     category: "blockchain",
     environment: "prod",
-    url: "https://api.integralayer.com",
+    url: "https://mainnet.integralayer.com/api",
     checkType: "cosmos-rest",
     timeout: 10000,
     enabled: true,
-    dependsOn: [],
+    dependsOn: ["portal-mainnet"],
     impacts: ["explorer-mainnet"],
     impactDescription: "Mainnet explorer loses validator and governance data",
     description:
-      "Cosmos REST/LCD for mainnet — governance, staking queries, account info",
+      "Cosmos REST/LCD for mainnet — Hetzner gateway via path routing",
     richDescription:
-      "The Cosmos REST (LCD) endpoint for mainnet, serving governance proposals, staking delegation data, account balances, validator sets, and distribution rewards via standard HTTP REST calls. The explorer depends on this heavily for validator detail pages, governance proposal displays, and account lookup features. External integrations (wallets, aggregators) also use this endpoint for IRL token balance queries. If down, governance and staking data disappears from all consumer applications.",
+      "Cosmos REST/LCD for the Integra mainnet, served via Caddy path routing on the mainnet Hetzner gateway (89.167.88.24). Serves governance, staking, and account queries over HTTP.",
     owner: OWNERS.adam,
     links: {
-      endpoint: "https://api.integralayer.com",
+      endpoint: "https://mainnet.integralayer.com/api",
       docs: "https://docs.integralayer.com/nodes",
     },
-    commonIssues: cosmosRestIssues,
-    tags: ["Cosmos SDK"],
+    commonIssues: cosmosRestCaddyIssues,
+    tags: ["Cosmos SDK", "Caddy", "Hetzner"],
   },
 
   // -- Blockchain (Mainnet -- Adam's gateway, adamboudj.integralayer.com) ----
@@ -740,15 +740,15 @@ export const ENDPOINTS: Endpoint[] = [
   // -- Validators (mainnet) --------------------------------------------------
   {
     id: "validator-1",
-    name: "Validator 1",
+    name: "Validator 1 (Old DO) [DEPRECATED]",
     category: "validators",
     environment: "prod",
     url: "http://165.227.118.77:26657",
     checkType: "cosmos-peer-check",
     peerIp: "3.92.110.107",
-    publicRpc: "https://rpc.integralayer.com",
+    publicRpc: "https://mainnet.integralayer.com/rpc",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // Deprecated — old DigitalOcean validator, mainnet redeployed
     dependsOn: [],
     impacts: [],
     description:
@@ -762,15 +762,15 @@ export const ENDPOINTS: Endpoint[] = [
   },
   {
     id: "validator-2",
-    name: "Validator 2",
+    name: "Validator 2 (Old DO) [DEPRECATED]",
     category: "validators",
     environment: "prod",
     url: "http://159.65.168.118:26657",
     checkType: "cosmos-peer-check",
     peerIp: "159.65.168.118",
-    publicRpc: "https://rpc.integralayer.com",
+    publicRpc: "https://mainnet.integralayer.com/rpc",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // Deprecated — old DigitalOcean validator
     dependsOn: [],
     impacts: [],
     description:
@@ -784,15 +784,15 @@ export const ENDPOINTS: Endpoint[] = [
   },
   {
     id: "validator-3",
-    name: "Validator 3",
+    name: "Validator 3 (Old DO) [DEPRECATED]",
     category: "validators",
     environment: "prod",
     url: "http://104.131.34.167:26657",
     checkType: "cosmos-peer-check",
     peerIp: "104.131.34.167",
-    publicRpc: "https://rpc.integralayer.com",
+    publicRpc: "https://mainnet.integralayer.com/rpc",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // Deprecated — old DigitalOcean validator
     dependsOn: [],
     impacts: [],
     description:
@@ -812,7 +812,7 @@ export const ENDPOINTS: Endpoint[] = [
     url: "http://adamboudj.integralayer.com:26657",
     checkType: "cosmos-peer-check",
     peerIp: "3.92.110.107",
-    publicRpc: "https://rpc.integralayer.com",
+    publicRpc: "https://mainnet.integralayer.com/rpc",
     timeout: 10000,
     enabled: true,
     dependsOn: [],
