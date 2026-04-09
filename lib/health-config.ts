@@ -300,17 +300,11 @@ export const APP_GROUPS: AppGroup[] = [
     endpoints: [
       "explorer-mainnet",
       "explorer-testnet",
-      "explorer-v2",
-      "explorer-graphql",
-      "blockscout-mainnet",
       "blockscout-testnet",
       "mainnet-cosmos-rpc",
       "mainnet-cosmos-rest",
       "testnet-cosmos-rpc",
       "testnet-cosmos-rest",
-      "explorer-mainnet-sync",
-      "explorer-testnet-sync",
-      "explorer-mainnet-deep-health",
       "explorer-mainnet-backend",
       "explorer-testnet-backend",
     ],
@@ -338,8 +332,6 @@ export const APP_GROUPS: AppGroup[] = [
       "mainnet-evm-rpc",
       "mainnet-cosmos-rpc",
       "mainnet-cosmos-rest",
-      "mainnet-cosmos-rpc-adam",
-      "mainnet-cosmos-rest-adam",
       "testnet-evm-rpc",
       "testnet-cosmos-rpc",
       "testnet-cosmos-rest",
@@ -533,7 +525,7 @@ export const ENDPOINTS: Endpoint[] = [
     url: "https://adamboudj.integralayer.com/cometbft",
     checkType: "cosmos-rpc",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // adamboudj.integralayer.com DNS gone — old EC2 box (3.92.110.107) no longer exists
     dependsOn: [],
     impacts: ["explorer-v2"],
     impactDescription: "Explorer v2 loses block data if primary also down",
@@ -553,7 +545,7 @@ export const ENDPOINTS: Endpoint[] = [
     url: "https://adamboudj.integralayer.com/rest",
     checkType: "cosmos-rest",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // adamboudj.integralayer.com DNS gone — old EC2 box (3.92.110.107) no longer exists
     dependsOn: [],
     impacts: [],
     description:
@@ -744,10 +736,8 @@ export const ENDPOINTS: Endpoint[] = [
     name: "Integra-Gateway (Hetzner)",
     category: "validators",
     environment: "prod",
-    url: "http://89.167.88.24:26657",
-    checkType: "cosmos-peer-check",
-    peerIp: "89.167.88.24",
-    publicRpc: "https://mainnet.integralayer.com/rpc",
+    url: "https://mainnet.integralayer.com/rpc",
+    checkType: "cosmos-rpc",
     timeout: 10000,
     enabled: true,
     dependsOn: [],
@@ -858,7 +848,7 @@ export const ENDPOINTS: Endpoint[] = [
     url: "http://3.208.92.57:26657",
     checkType: "cosmos-peer-check",
     peerIp: "3.208.92.57",
-    publicRpc: "https://mainnet.integralayer.com/rpc",
+    publicRpc: "http://45.77.139.208:36657",
     timeout: 10000,
     enabled: true,
     dependsOn: [],
@@ -1286,13 +1276,13 @@ export const ENDPOINTS: Endpoint[] = [
   },
   {
     id: "explorer-v2",
-    name: "Explorer v2 (Mainnet)",
+    name: "Explorer v2 (Mainnet) [OFFLINE]",
     category: "frontends",
     environment: "prod",
     url: "https://scan.integralayer.com",
     checkType: "http-get",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // scan.integralayer.com DNS gone — Hasura/Callisto not running on archive node
     dependsOn: ["mainnet-cosmos-rpc-adam", "mainnet-evm-rpc"],
     impacts: [],
     description: "Explorer v2 — Big Dipper fork with Cosmos + EVM indexing",
@@ -1321,13 +1311,13 @@ export const ENDPOINTS: Endpoint[] = [
   },
   {
     id: "explorer-graphql",
-    name: "Explorer GraphQL API",
+    name: "Explorer GraphQL API [OFFLINE]",
     category: "apis",
     environment: "prod",
     url: "https://scan.integralayer.com/v1/graphql",
     checkType: "graphql",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // scan.integralayer.com DNS gone — Hasura not running
     dependsOn: ["explorer-v2"],
     impacts: [],
     description:
@@ -1357,13 +1347,13 @@ export const ENDPOINTS: Endpoint[] = [
   },
   {
     id: "blockscout-mainnet",
-    name: "Blockscout EVM (Mainnet)",
+    name: "Blockscout EVM (Mainnet) [OFFLINE]",
     category: "frontends",
     environment: "prod",
     url: "https://blockscout.integralayer.com",
     checkType: "http-get",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // blockscout.integralayer.com DNS gone — Docker not running on archive node
     dependsOn: ["mainnet-evm-rpc"],
     impacts: [],
     description:
@@ -2143,14 +2133,14 @@ export const ENDPOINTS: Endpoint[] = [
   // -- Explorer Sync Monitoring -----------------------------------------------
   {
     id: "explorer-mainnet-sync",
-    name: "Mainnet Explorer Sync",
+    name: "Mainnet Explorer Sync [OFFLINE]",
     category: "blockchain",
     environment: "prod",
     url: "https://scan.integralayer.com/v1/graphql",
     checkType: "explorer-sync",
     chainRpcUrl: "https://adamboudj.integralayer.com/rpc",
     timeout: 15000,
-    enabled: true,
+    enabled: false, // Both scan.integralayer.com and adamboudj.integralayer.com are down
     dependsOn: ["mainnet-evm-rpc", "explorer-v2"],
     impacts: ["explorer-v2"],
     impactDescription:
@@ -2243,13 +2233,13 @@ export const ENDPOINTS: Endpoint[] = [
   // -- Explorer Deep Health (Callisto/Hasura integrity) ----------------------
   {
     id: "explorer-mainnet-deep-health",
-    name: "Mainnet Explorer Deep Health",
+    name: "Mainnet Explorer Deep Health [OFFLINE]",
     category: "blockchain",
     environment: "prod",
     url: "https://scan.integralayer.com/v1/graphql",
     checkType: "explorer-deep-health",
     timeout: 20000,
-    enabled: true,
+    enabled: false, // scan.integralayer.com DNS gone — Hasura not running
     dependsOn: ["explorer-mainnet-sync", "explorer-graphql"],
     impacts: ["explorer-v2"],
     impactDescription:
