@@ -935,7 +935,7 @@ export const ENDPOINTS: Endpoint[] = [
     links: {
       endpoint: "https://dashboard-apis.integralayer.com",
       docs: "https://docs.integralayer.com",
-      repo: "https://github.com/Integra-layer/dashboard",
+      repo: "https://github.com/polytrade-finance/integra-dashboard-frontend",
     },
     commonIssues: [
       {
@@ -973,7 +973,7 @@ export const ENDPOINTS: Endpoint[] = [
     links: {
       endpoint: "https://dev-dashboard-apis.integralayer.com",
       docs: "https://docs.integralayer.com",
-      repo: "https://github.com/Integra-layer/dashboard",
+      repo: "https://github.com/polytrade-finance/integra-dashboard-frontend",
     },
     commonIssues: deepHealthApiIssues,
     tags: ["NestJS", "PostgreSQL"],
@@ -1053,7 +1053,7 @@ export const ENDPOINTS: Endpoint[] = [
     owner: OWNERS.kalki,
     links: {
       endpoint: "https://ng6mpgxjz7.ap-south-1.awsapprunner.com",
-      repo: "https://github.com/Integra-layer/city",
+      repo: "https://github.com/polytrade-finance/city-of-integra",
     },
     commonIssues: [
       {
@@ -1090,7 +1090,7 @@ export const ENDPOINTS: Endpoint[] = [
     owner: OWNERS.kalki,
     links: {
       endpoint: "https://ygmwadph3x.ap-south-1.awsapprunner.com",
-      repo: "https://github.com/Integra-layer/city",
+      repo: "https://github.com/polytrade-finance/city-of-integra",
     },
     commonIssues: [
       {
@@ -1246,7 +1246,7 @@ export const ENDPOINTS: Endpoint[] = [
     links: {
       endpoint: "https://explorer.integralayer.com",
       docs: "https://docs.integralayer.com",
-      repo: "https://github.com/Integra-layer/explorer",
+      repo: "https://github.com/Integra-layer/integra-explorer",
     },
     commonIssues: vercelFrontendIssues,
     tags: ["Next.js", "Vercel"],
@@ -1262,17 +1262,17 @@ export const ENDPOINTS: Endpoint[] = [
     enabled: true,
     dependsOn: ["testnet-cosmos-rpc", "testnet-cosmos-rest"],
     impacts: [],
-    description: "Block explorer for testnet — development testing",
+    description: "Block explorer for testnet — Hetzner Helsinki gateway",
     richDescription:
-      "Testnet block explorer for the Ormos chain, running the same Next.js codebase as the mainnet explorer but connected to testnet RPC and REST endpoints. Used daily by the dev team to verify test transactions, inspect testnet blocks, and validate governance features during QA. Depends on testnet Cosmos RPC and REST. If down, developers lose visibility into testnet chain activity and must resort to CLI queries for debugging.",
+      "Testnet block explorer for the Ormos chain, hosted on the Helsinki gateway (46.225.231.81). Used daily by the dev team to verify test transactions, inspect testnet blocks, and validate governance features during QA. Depends on testnet Cosmos RPC and REST.",
     owner: OWNERS.adam,
     links: {
       endpoint: "https://testnet.explorer.integralayer.com",
       docs: "https://docs.integralayer.com",
-      repo: "https://github.com/Integra-layer/explorer",
+      repo: "https://github.com/Integra-layer/integra-explorer",
     },
     commonIssues: vercelFrontendIssues,
-    tags: ["Next.js", "Vercel"],
+    tags: ["Next.js", "Hetzner"],
   },
   {
     id: "explorer-v2",
@@ -1517,18 +1517,18 @@ export const ENDPOINTS: Endpoint[] = [
     checkType: "http-get",
     timeout: 10000,
     enabled: true,
-    dependsOn: ["vercel"],
+    dependsOn: [],
     impacts: [],
-    description: "Developer documentation and integration guides",
+    description: "Developer documentation and integration guides (CloudFront)",
     richDescription:
-      "Developer documentation site built with Docusaurus and hosted on Vercel, containing API references, SDK integration guides, node operator runbooks, architecture overviews, and smart contract documentation. This is the first stop for external developers integrating with Integra and for internal team members referencing API specs. If down, developer onboarding stalls and the team loses access to canonical API documentation. Contact Tara for content updates or Vercel deployment issues.",
+      "Developer documentation site hosted via CloudFront (d1xxuq0cmqccbi.cloudfront.net). Contains API references, SDK integration guides, node operator runbooks, architecture overviews, and smart contract documentation. First stop for external developers integrating with Integra.",
     owner: OWNERS.adam,
     links: {
       endpoint: "https://docs.integralayer.com",
-      docs: "https://docs.integralayer.com",
+      repo: "https://github.com/Integra-layer/docs",
     },
-    commonIssues: vercelFrontendIssues,
-    tags: ["Docusaurus", "Vercel"],
+    commonIssues: httpReachableApiIssues,
+    tags: ["CloudFront"],
   },
   {
     id: "main-website",
@@ -1539,15 +1539,15 @@ export const ENDPOINTS: Endpoint[] = [
     checkType: "http-get",
     timeout: 10000,
     enabled: true,
-    dependsOn: ["vercel"],
+    dependsOn: [],
     impacts: [],
-    description: "Integra Layer marketing website",
+    description: "Integra Layer marketing website (Webflow)",
     richDescription:
-      "The primary public-facing website for Integra Layer, built with Next.js and deployed on Vercel. Serves as the main entry point for potential users, investors, partners, and developers discovering the Integra ecosystem. Contains the product overview, team page, ecosystem links, blog, and investor materials. Downtime is highly visible — it is the first URL shared in pitches, press releases, and social media. Contact Tara for content or deployment.",
+      "The primary public-facing website for Integra Layer, hosted on Webflow (www.integralayer.com → cdn.webflow.com). Serves as the main entry point for potential users, investors, partners, and developers discovering the Integra ecosystem. Contains the product overview, team page, ecosystem links, blog, and investor materials. Downtime is highly visible — it is the first URL shared in pitches, press releases, and social media.",
     owner: OWNERS.tara,
     links: { endpoint: "https://integralayer.com" },
-    commonIssues: vercelFrontendIssues,
-    tags: ["Next.js", "Vercel"],
+    commonIssues: httpReachableApiIssues,
+    tags: ["Webflow"],
   },
   {
     id: "dashboard-prod",
@@ -1560,17 +1560,17 @@ export const ENDPOINTS: Endpoint[] = [
     enabled: true,
     dependsOn: ["dashboard-api-prod"],
     impacts: [],
-    description: "Main dashboard — portfolio, staking, XP, assets, leaderboard",
+    description: "Main dashboard — portfolio, staking, XP, assets, leaderboard (CloudFront)",
     richDescription:
-      "The production Integra Dashboard — the flagship user-facing application built with React and deployed on Vercel. Provides portfolio management, staking delegation, XP tracking, asset management, leaderboard rankings, and notification preferences. This is where Integra users spend most of their time and is the single most important frontend service. Fully depends on the Dashboard API for all data. If the frontend itself is down (Vercel issue), users cannot access any platform features. Contact Nawar for API-related issues or Tara for frontend bugs.",
+      "The production Integra Dashboard — the flagship user-facing application built with React and deployed via CloudFront (d30tx0nyvfn5m7.cloudfront.net). Provides portfolio management, staking delegation, XP tracking, asset management, leaderboard rankings, and notification preferences. This is where Integra users spend most of their time and is the single most important frontend service. Fully depends on the Dashboard API for all data.",
     owner: OWNERS.tara,
     links: {
       endpoint: "https://dashboard.integralayer.com",
       docs: "https://docs.integralayer.com",
-      repo: "https://github.com/Integra-layer/dashboard",
+      repo: "https://github.com/polytrade-finance/integra-dashboard-frontend",
     },
-    commonIssues: vercelFrontendIssues,
-    tags: ["React", "Vercel"],
+    commonIssues: httpReachableApiIssues,
+    tags: ["React", "CloudFront"],
   },
   {
     id: "dashboard-dev",
@@ -1583,17 +1583,17 @@ export const ENDPOINTS: Endpoint[] = [
     enabled: true,
     dependsOn: ["dashboard-api-dev"],
     impacts: [],
-    description: "Dashboard (dev) — development and staging",
+    description: "Dashboard (dev) — development and staging (CloudFront)",
     richDescription:
-      "Development instance of the Dashboard frontend on Vercel, connected to the dev Dashboard API and testnet blockchain endpoints. Used by Tara and the frontend team for building and testing new UI features, validating design changes, and running E2E tests before production deployment. Also serves as the staging environment for stakeholder previews. If down, frontend development is blocked and the team cannot demo upcoming features.",
+      "Development instance of the Dashboard frontend on CloudFront (d30tx0nyvfn5m7.cloudfront.net), connected to the dev Dashboard API and testnet blockchain endpoints. Used for building and testing new UI features before production deployment.",
     owner: OWNERS.tara,
     links: {
       endpoint: "https://dev-dashboard.integralayer.com",
       docs: "https://docs.integralayer.com",
-      repo: "https://github.com/Integra-layer/dashboard",
+      repo: "https://github.com/polytrade-finance/integra-dashboard-frontend",
     },
-    commonIssues: vercelFrontendIssues,
-    tags: ["React", "Vercel"],
+    commonIssues: httpReachableApiIssues,
+    tags: ["React", "CloudFront"],
   },
   {
     id: "city-prod",
@@ -1606,16 +1606,16 @@ export const ENDPOINTS: Endpoint[] = [
     enabled: true,
     dependsOn: ["city-api-prod"],
     impacts: [],
-    description: "City of Integra — gamified city builder experience",
+    description: "City of Integra — gamified city builder experience (CloudFront)",
     richDescription:
-      "The production City of Integra web application — a gamified city builder where users construct and manage virtual cities to earn XP and rewards. Built with React and deployed on Vercel, it renders an interactive isometric city view with real-time building placement and resource management. Fully depends on the City API for all game logic and state persistence. If the frontend is down, users cannot access the game at all. Contact Kalki for game-related issues or Tara for frontend deployment.",
+      "The production City of Integra web application — a gamified city builder deployed via CloudFront (d2qwqsckcs28yb.cloudfront.net). Users construct and manage virtual cities to earn XP and rewards. Fully depends on the City API for all game logic.",
     owner: OWNERS.kalki,
     links: {
       endpoint: "https://city.integralayer.com",
-      repo: "https://github.com/Integra-layer/city",
+      repo: "https://github.com/polytrade-finance/city-of-integra",
     },
-    commonIssues: vercelFrontendIssues,
-    tags: ["React", "Vercel"],
+    commonIssues: httpReachableApiIssues,
+    tags: ["React", "CloudFront"],
   },
   {
     id: "city-dev",
@@ -1628,16 +1628,16 @@ export const ENDPOINTS: Endpoint[] = [
     enabled: true,
     dependsOn: ["city-api-dev"],
     impacts: [],
-    description: "City of Integra (dev)",
+    description: "City of Integra (dev) — CloudFront",
     richDescription:
-      "Development instance of the City of Integra frontend on Vercel, used by Kalki for testing new game UI features, building animations, and UX improvements before production. Connected to the dev City API with test game state. Also used for playtesting new mechanics and balance changes with the team before releasing to users.",
+      "Development instance of the City of Integra frontend on CloudFront (d2qwqsckcs28yb.cloudfront.net). Used for testing new game UI features and playtesting mechanics before production.",
     owner: OWNERS.kalki,
     links: {
       endpoint: "https://dev-city.integralayer.com",
-      repo: "https://github.com/Integra-layer/city",
+      repo: "https://github.com/polytrade-finance/city-of-integra",
     },
-    commonIssues: vercelFrontendIssues,
-    tags: ["React", "Vercel"],
+    commonIssues: httpReachableApiIssues,
+    tags: ["React", "CloudFront"],
   },
   {
     id: "whitepaper",
@@ -1650,13 +1650,13 @@ export const ENDPOINTS: Endpoint[] = [
     enabled: true,
     dependsOn: [],
     impacts: [],
-    description: "Technical whitepaper — protocol design and architecture",
+    description: "Technical whitepaper — protocol design and architecture (GitBook)",
     richDescription:
-      "The Integra Layer technical whitepaper, a static site on Vercel detailing the protocol design, CometBFT consensus mechanism, EVM module architecture, tokenomics (IRL supply, staking rewards, inflation), and network governance model. This document is referenced in investor due diligence, exchange listing applications, and developer onboarding. Downtime prevents potential investors and partners from accessing critical technical information. Contact Tara for content updates.",
+      "The Integra Layer technical whitepaper, hosted on GitBook (10f87b7384-hosting.gitbook.io) via CNAME. Details the protocol design, CometBFT consensus mechanism, EVM module architecture, tokenomics (IRL supply, staking rewards, inflation), and network governance model. Referenced in investor due diligence, exchange listing applications, and developer onboarding.",
     owner: OWNERS.tara,
     links: { endpoint: "https://whitepaper.integralayer.com" },
-    commonIssues: vercelFrontendIssues,
-    tags: ["Vercel"],
+    commonIssues: httpReachableApiIssues,
+    tags: ["GitBook"],
   },
   {
     id: "portal",
@@ -1667,7 +1667,7 @@ export const ENDPOINTS: Endpoint[] = [
     checkType: "http-get",
     timeout: 10000,
     enabled: true,
-    dependsOn: ["absinthe-api"],
+    dependsOn: [],
     impacts: [],
     description: "XP Portal — points tracking, leaderboard, rewards",
     richDescription:
@@ -1675,7 +1675,7 @@ export const ENDPOINTS: Endpoint[] = [
     owner: OWNERS.tara,
     links: {
       endpoint: "https://portal.integralayer.com",
-      repo: "https://github.com/Integra-layer/portal",
+      repo: "https://github.com/Integra-layer/integra-portal",
     },
     commonIssues: [
       {
