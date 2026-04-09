@@ -484,7 +484,7 @@ async function checkDeepHealth(ep: Endpoint): Promise<CheckResult> {
 async function checkCosmosPeer(ep: Endpoint): Promise<CheckResult> {
   const start = Date.now();
   const peerIp = ep.peerIp || new URL(ep.url).hostname;
-  const publicRpc = ep.publicRpc || "https://rpc.integralayer.com";
+  const publicRpc = ep.publicRpc || "https://mainnet.integralayer.com/rpc";
 
   const res = await httpRequest(`${publicRpc}/net_info`, {
     timeout: ep.timeout,

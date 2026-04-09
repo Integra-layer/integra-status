@@ -336,20 +336,21 @@ export const APP_GROUPS: AppGroup[] = [
     description: "EVM and Cosmos RPC/REST nodes for mainnet and testnet",
     endpoints: [
       "mainnet-evm-rpc",
+      "mainnet-cosmos-rpc",
+      "mainnet-cosmos-rest",
       "mainnet-cosmos-rpc-adam",
       "mainnet-cosmos-rest-adam",
       "testnet-evm-rpc",
-      "testnet-evm-rpc-ormos",
-      "testnet-cosmos-rpc-ormos",
-      "testnet-cosmos-rest-ormos",
+      "testnet-cosmos-rpc",
+      "testnet-cosmos-rest",
     ],
   },
   {
     id: "validators",
     name: "Validators",
     icon: "\u26A1",
-    description: "Mainnet validator node for block production and consensus",
-    endpoints: ["validator-adam"],
+    description: "4 mainnet validators for block production and consensus (~691k IRL each)",
+    endpoints: ["validator-gateway", "validator-signer1", "validator-signer2", "validator-archive"],
   },
   {
     id: "sites",
@@ -739,101 +740,149 @@ export const ENDPOINTS: Endpoint[] = [
 
   // -- Validators (mainnet) --------------------------------------------------
   {
-    id: "validator-1",
-    name: "Validator 1 (Old DO) [DEPRECATED]",
+    id: "validator-gateway",
+    name: "Integra-Gateway (Hetzner)",
     category: "validators",
     environment: "prod",
-    url: "http://165.227.118.77:26657",
+    url: "http://89.167.88.24:26657",
     checkType: "cosmos-peer-check",
-    peerIp: "3.92.110.107",
+    peerIp: "89.167.88.24",
     publicRpc: "https://mainnet.integralayer.com/rpc",
     timeout: 10000,
-    enabled: false, // Deprecated — old DigitalOcean validator, mainnet redeployed
+    enabled: true,
     dependsOn: [],
-    impacts: [],
+    impacts: ["mainnet-evm-rpc", "mainnet-cosmos-rpc", "mainnet-cosmos-rest"],
+    impactDescription:
+      "Primary gateway node — all mainnet.integralayer.com endpoints go down if this validator fails",
     description:
-      "Mainnet validator node (DigitalOcean) — block production and consensus",
+      "Integra-Gateway validator (Hetzner) — primary mainnet gateway and block producer",
     richDescription:
-      "Primary mainnet validator node hosted on DigitalOcean (NYC region), actively participating in CometBFT consensus and block production for the Integra network. This is one of four validators in the active set — its voting power directly influences block finality times. If this validator goes offline, the network loses ~25% of voting power, which degrades block production speed and could risk chain halts if combined with another validator failure. Monitored via peer connectivity checks against the public RPC.",
+      "Primary mainnet validator and gateway node hosted on Hetzner (89.167.88.24). Serves as the main entry point for all mainnet.integralayer.com endpoints via Caddy reverse proxy. One of four validators with ~691k IRL voting power (~25% of network). Home dir: ~/.intgd, P2P port: 26656. If this node goes down, all mainnet RPC/REST/EVM endpoints become unreachable AND the network loses 25% voting power.",
     owner: OWNERS.adam,
-    links: { endpoint: "http://165.227.118.77:26657" },
-    commonIssues: validatorPeerIssues,
-    tags: ["CometBFT", "DigitalOcean"],
+    links: { endpoint: "http://89.167.88.24:26657" },
+    commonIssues: [
+      {
+        cause: "Validator not in peer list — node may be offline",
+        fix: "SSH in: ssh -i ~/.ssh/integra root@89.167.88.24; check: sudo systemctl status intgd",
+      },
+      {
+        cause: "Caddy reverse proxy down — endpoints unreachable but validator still signing",
+        fix: "Check Caddy: sudo systemctl status caddy; restart: sudo systemctl restart caddy",
+      },
+      {
+        cause: "Validator jailed due to downtime",
+        fix: "Check jail status: intgd query staking validator <valoper>; unjail with: intgd tx slashing unjail",
+      },
+    ],
+    tags: ["CometBFT", "Hetzner"],
   },
   {
-    id: "validator-2",
-    name: "Validator 2 (Old DO) [DEPRECATED]",
+    id: "validator-signer1",
+    name: "Integra-Signer1 (Vultr)",
     category: "validators",
     environment: "prod",
-    url: "http://159.65.168.118:26657",
+    url: "http://45.77.139.208:36657",
     checkType: "cosmos-peer-check",
-    peerIp: "159.65.168.118",
-    publicRpc: "https://mainnet.integralayer.com/rpc",
-    timeout: 10000,
-    enabled: false, // Deprecated — old DigitalOcean validator
-    dependsOn: [],
-    impacts: [],
-    description:
-      "Mainnet validator node (DigitalOcean) — block production and consensus",
-    richDescription:
-      "Second mainnet validator on DigitalOcean, contributing to BFT consensus and block finality for Integra mainnet. Provides redundancy in the validator set — if Validator 1 goes down, this node and others maintain consensus. Geographic separation from other nodes ensures the network withstands regional outages. Its consistent uptime is critical for maintaining the 2/3+ voting power threshold required for block production.",
-    owner: OWNERS.adam,
-    links: { endpoint: "http://159.65.168.118:26657" },
-    commonIssues: validatorPeerIssues,
-    tags: ["CometBFT", "DigitalOcean"],
-  },
-  {
-    id: "validator-3",
-    name: "Validator 3 (Old DO) [DEPRECATED]",
-    category: "validators",
-    environment: "prod",
-    url: "http://104.131.34.167:26657",
-    checkType: "cosmos-peer-check",
-    peerIp: "104.131.34.167",
-    publicRpc: "https://mainnet.integralayer.com/rpc",
-    timeout: 10000,
-    enabled: false, // Deprecated — old DigitalOcean validator
-    dependsOn: [],
-    impacts: [],
-    description:
-      "Mainnet validator node (DigitalOcean) — block production and consensus",
-    richDescription:
-      "Third mainnet validator on DigitalOcean, completing the infrastructure-managed validator trio. Participates in block signing, consensus voting, and maintains a full copy of chain state. Together with Validators 1 and 2, this node ensures the network has sufficient voting power for liveness even if one validator is temporarily down. Monitored for peer connectivity and block-signing participation.",
-    owner: OWNERS.adam,
-    links: { endpoint: "http://104.131.34.167:26657" },
-    commonIssues: validatorPeerIssues,
-    tags: ["CometBFT", "DigitalOcean"],
-  },
-  {
-    id: "validator-adam",
-    name: "Adam's Node (AWS)",
-    category: "validators",
-    environment: "prod",
-    url: "http://adamboudj.integralayer.com:26657",
-    checkType: "cosmos-peer-check",
-    peerIp: "3.92.110.107",
+    peerIp: "45.77.139.208",
     publicRpc: "https://mainnet.integralayer.com/rpc",
     timeout: 10000,
     enabled: true,
     dependsOn: [],
     impacts: [],
-    description: "Adam's validator node (AWS Singapore) — personal validator",
+    impactDescription:
+      "Network loses ~25% voting power — chain continues but finality degrades",
+    description:
+      "Integra-Signer1 validator (Vultr) — block signing and consensus",
     richDescription:
-      "Adam's personal validator node running on AWS EC2 in Singapore (ap-southeast-1), providing Asia-Pacific geographic diversity to the validator set. This is the only validator outside the DigitalOcean infrastructure, reducing single-provider risk. Bonded with 100 IRL tokens staked, actively signing blocks and earning staking rewards. Managed directly by Adam with separate SSH keys and monitoring — contact adam@integralayer.com for any issues with this specific node.",
+      "Second mainnet validator hosted on Vultr (45.77.139.208). Runs both testnet and mainnet on the same server with port offset +10000 for mainnet (P2P 36656, RPC 36657). Home dir: ~/.intgd-mainnet. One of four validators with ~691k IRL voting power. Provides multi-cloud redundancy (Vultr vs Hetzner/DO/AWS). If offline, network loses 25% voting power but continues producing blocks.",
     owner: OWNERS.adam,
-    links: { endpoint: "http://adamboudj.integralayer.com:26657" },
+    links: { endpoint: "http://45.77.139.208:36657" },
     commonIssues: [
       {
         cause: "Validator not in peer list — node may be offline",
-        fix: "SSH into AWS EC2 (3.92.110.107): ssh -i ~/.ssh/integra-validator-key.pem ubuntu@3.92.110.107; check: sudo systemctl status intgd",
+        fix: "SSH in: ssh -i ~/.ssh/integra root@45.77.139.208; check: sudo systemctl status intgd-mainnet",
       },
       {
-        cause: "AWS EC2 instance stopped or terminated",
-        fix: "Check AWS console for instance i-* in ap-southeast-1; restart if stopped",
+        cause: "Port confusion — mainnet uses +10000 offset (36656/36657), testnet uses default (26656/26657)",
+        fix: "Verify correct ports: mainnet P2P 36656, RPC 36657; testnet P2P 26656, RPC 26657",
       },
       {
         cause: "Validator jailed due to downtime",
-        fix: "Check jail status: intgd query staking validator integravaloper124gllptlcu2ew5guxnyvcc483jwkwj8mejng0m; unjail with: intgd tx slashing unjail",
+        fix: "Check jail status via mainnet RPC; unjail with: intgd tx slashing unjail --home ~/.intgd-mainnet",
+      },
+    ],
+    tags: ["CometBFT", "Vultr"],
+  },
+  {
+    id: "validator-signer2",
+    name: "Integra-Signer2 (DigitalOcean)",
+    category: "validators",
+    environment: "prod",
+    url: "http://159.223.206.94:36657",
+    checkType: "cosmos-peer-check",
+    peerIp: "159.223.206.94",
+    publicRpc: "https://mainnet.integralayer.com/rpc",
+    timeout: 10000,
+    enabled: true,
+    dependsOn: [],
+    impacts: [],
+    impactDescription:
+      "Network loses ~25% voting power — chain continues but finality degrades",
+    description:
+      "Integra-Signer2 validator (DigitalOcean) — block signing and consensus",
+    richDescription:
+      "Third mainnet validator hosted on DigitalOcean (159.223.206.94). Like Signer1, runs both testnet and mainnet with port offset +10000 for mainnet (P2P 36656, RPC 36657). Home dir: ~/.intgd-mainnet. One of four validators with ~691k IRL voting power. Provides geographic and cloud-provider diversity in the validator set.",
+    owner: OWNERS.adam,
+    links: { endpoint: "http://159.223.206.94:36657" },
+    commonIssues: [
+      {
+        cause: "Validator not in peer list — node may be offline",
+        fix: "SSH in: ssh -i ~/.ssh/integra root@159.223.206.94; check: sudo systemctl status intgd-mainnet",
+      },
+      {
+        cause: "Port confusion — mainnet uses +10000 offset (36656/36657), testnet uses default (26656/26657)",
+        fix: "Verify correct ports: mainnet P2P 36656, RPC 36657; testnet P2P 26656, RPC 26657",
+      },
+      {
+        cause: "Validator jailed due to downtime",
+        fix: "Check jail status via mainnet RPC; unjail with: intgd tx slashing unjail --home ~/.intgd-mainnet",
+      },
+    ],
+    tags: ["CometBFT", "DigitalOcean"],
+  },
+  {
+    id: "validator-archive",
+    name: "Integra-Archive (AWS)",
+    category: "validators",
+    environment: "prod",
+    url: "http://3.208.92.57:26657",
+    checkType: "cosmos-peer-check",
+    peerIp: "3.208.92.57",
+    publicRpc: "https://mainnet.integralayer.com/rpc",
+    timeout: 10000,
+    enabled: true,
+    dependsOn: [],
+    impacts: [],
+    impactDescription:
+      "Network loses ~25% voting power — chain continues but finality degrades. Archive node also hosts Explorer v2, Blockscout, and status page.",
+    description:
+      "Integra-Archive validator (AWS) — block signing, archive node, explorer host",
+    richDescription:
+      "Fourth mainnet validator hosted on AWS EC2 (3.208.92.57). One of four validators with ~691k IRL voting power. Also serves as the archive node and hosts Explorer v2, Blockscout, Hasura, Callisto, and the status page. Home dir: ~/.intgd, P2P port: 26656. SSH: ssh -i ~/.ssh/integra-validator-key.pem ubuntu@3.208.92.57. If offline, the network loses 25% voting power AND all explorer/status services go down.",
+    owner: OWNERS.adam,
+    links: { endpoint: "http://3.208.92.57:26657" },
+    commonIssues: [
+      {
+        cause: "Validator not in peer list — node may be offline",
+        fix: "SSH in: ssh -i ~/.ssh/integra-validator-key.pem ubuntu@3.208.92.57; check: sudo systemctl status intgd",
+      },
+      {
+        cause: "AWS EC2 instance stopped or disk full",
+        fix: "Check AWS console; this box also runs Explorer v2, Blockscout, Hasura — check disk: df -h",
+      },
+      {
+        cause: "Validator jailed due to downtime",
+        fix: "Check jail status: intgd query staking validator <valoper>; unjail with: intgd tx slashing unjail",
       },
     ],
     tags: ["CometBFT", "AWS"],
@@ -1387,12 +1436,12 @@ export const ENDPOINTS: Endpoint[] = [
     checkType: "http-get",
     timeout: 10000,
     enabled: true,
-    dependsOn: ["vercel"],
+    dependsOn: [],
     impacts: [],
     description:
-      "Infrastructure status dashboard — real-time health monitoring",
+      "Infrastructure status dashboard — real-time health monitoring (EC2)",
     richDescription:
-      "The Integra infrastructure status page deployed on Vercel at status.integralayer.com, monitoring 40+ endpoints across blockchain nodes, validators, APIs, frontends, and external services. Self-monitoring ensures the status page itself is accessible when users need to check system health during incidents.",
+      "The Integra infrastructure status page deployed on EC2 (3.92.110.107) at status.integralayer.com via Caddy reverse proxy (port 3003). Monitors 55+ endpoints across blockchain nodes, validators, APIs, frontends, and external services. Self-monitoring ensures the status page itself is accessible when users need to check system health during incidents. Telegram bot @IntegraHealthBot sends alerts on status transitions.",
     owner: OWNERS.adam,
     links: {
       endpoint: "https://status.integralayer.com",
