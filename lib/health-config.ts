@@ -305,6 +305,8 @@ export const APP_GROUPS: AppGroup[] = [
       "mainnet-cosmos-rest",
       "testnet-cosmos-rpc",
       "testnet-cosmos-rest",
+      "mainnet-chain-freshness",
+      "testnet-chain-freshness",
       "explorer-mainnet-backend",
       "explorer-testnet-backend",
     ],
@@ -370,7 +372,6 @@ export const APP_GROUPS: AppGroup[] = [
       "supply-api",
       "presign-api",
       "upload-tracker-api",
-      "testnet-faucet-api",
     ],
   },
   {
@@ -631,103 +632,80 @@ export const ENDPOINTS: Endpoint[] = [
     tags: ["Cosmos SDK", "Caddy", "Hetzner"],
   },
 
-  // -- Blockchain (Testnet -- Ormos gateway, ormos.integralayer.com) ---------
+  // -- Chain freshness (user-facing staleness alerts) -----------------------
+  // Pages on Telegram when the latest block is >30 minutes old. Distinct from
+  // testnet-cosmos-rpc which trips at 60s — too noisy for paging.
   {
-    id: "testnet-evm-rpc-ormos",
-    name: "Testnet EVM RPC (Ormos) [DEPRECATED]",
+    id: "testnet-chain-freshness",
+    name: "Testnet Chain Freshness",
     category: "blockchain",
     environment: "dev",
-    url: "https://ormos.integralayer.com/rpc",
-    checkType: "evm-rpc",
+    url: "https://testnet.integralayer.com/rpc",
+    checkType: "chain-freshness",
     timeout: 10000,
-    enabled: false, // Deprecated — old AWS testnet, replaced by testnet.integralayer.com
-    expectedChainId: "0x666a",
-    dependsOn: [],
-    impacts: [],
+    enabled: true,
+    dependsOn: ["testnet-cosmos-rpc"],
+    impacts: ["explorer-testnet"],
+    impactDescription:
+      "Explorer shows stale block data; users see outdated network state",
     description:
-      "Ormos testnet EVM RPC gateway — Caddy reverse proxy to local EVM node",
+      "Testnet chain liveness — alerts when the chain hasn't produced a block in over 30 minutes",
     richDescription:
-      "EVM JSON-RPC endpoint for the Ormos testnet (chain ID 26218), served via Caddy reverse proxy on Adam's testnet AWS EC2 validator node (13.218.88.209). Provides a secondary EVM RPC path for testnet development. Caddy handles TLS termination via Let's Encrypt and path-based routing (/rpc strips prefix before proxying to port 8545). Also used by the IntegraWatch Telegram bot for faucet token sends.",
-    owner: OWNERS.adam,
-    links: { endpoint: "https://ormos.integralayer.com/rpc" },
-    commonIssues: evmRpcCaddyIssues,
-    tags: ["EVM", "Caddy", "AWS"],
-  },
-  {
-    id: "testnet-cosmos-rpc-ormos",
-    name: "Testnet Cosmos RPC (Ormos) [DEPRECATED]",
-    category: "blockchain",
-    environment: "dev",
-    url: "https://ormos.integralayer.com/cometbft",
-    checkType: "cosmos-rpc",
-    timeout: 10000,
-    enabled: false, // Deprecated — old AWS testnet, replaced by testnet.integralayer.com
-    dependsOn: [],
-    impacts: [],
-    description:
-      "Ormos testnet Cosmos RPC gateway — CometBFT via Caddy reverse proxy",
-    richDescription:
-      "Secondary CometBFT RPC endpoint for the Ormos testnet, proxied through Caddy on Adam's testnet validator node. Provides an alternative RPC path to the primary testnet-rpc.integralayer.com endpoint. Used by the IntegraWatch Telegram bot for /status validator monitoring.",
-    owner: OWNERS.adam,
-    links: { endpoint: "https://ormos.integralayer.com/cometbft" },
-    commonIssues: cosmosRpcCaddyIssues,
-    tags: ["CometBFT", "Caddy", "AWS"],
-  },
-  {
-    id: "testnet-cosmos-rest-ormos",
-    name: "Testnet REST/LCD (Ormos) [DEPRECATED]",
-    category: "blockchain",
-    environment: "dev",
-    url: "https://ormos.integralayer.com/rest",
-    checkType: "cosmos-rest",
-    timeout: 10000,
-    enabled: false, // Deprecated — old AWS testnet, replaced by testnet.integralayer.com
-    dependsOn: [],
-    impacts: [],
-    description:
-      "Ormos testnet REST/LCD gateway — Cosmos REST via Caddy reverse proxy",
-    richDescription:
-      "Secondary Cosmos REST/LCD endpoint for the Ormos testnet, served via Caddy on Adam's testnet validator node. Provides governance, staking, and account queries as a fallback to the primary testnet-api.integralayer.com endpoint.",
-    owner: OWNERS.adam,
-    links: { endpoint: "https://ormos.integralayer.com/rest" },
-    commonIssues: cosmosRestCaddyIssues,
-    tags: ["Cosmos SDK", "Caddy", "AWS"],
-  },
-  {
-    id: "testnet-faucet-api",
-    name: "Testnet Faucet API [DEPRECATED]",
-    category: "apis",
-    environment: "dev",
-    url: "https://ormos.integralayer.com/api/faucet",
-    checkType: "http-reachable",
-    timeout: 10000,
-    enabled: false, // Deprecated — old AWS testnet faucet
-    dependsOn: ["testnet-cosmos-rpc-ormos"],
-    impacts: [],
-    description: "Testnet faucet — dispenses test IRL tokens to developers",
-    richDescription:
-      "Testnet faucet API running on Adam's Ormos validator node (13.218.88.209), proxied via Caddy at /api/faucet. Dispenses test IRL tokens to developer wallet addresses for testing smart contracts, transaction flows, and staking features on the Ormos testnet. Includes a cooldown timer to prevent abuse. Depends on the testnet Cosmos RPC for broadcasting faucet transactions.",
+      "Polls the testnet CometBFT RPC /status endpoint every minute, comparing sync_info.latest_block_time to wall-clock now. Goes DEGRADED at 5 minutes of staleness, DOWN (and pages on Telegram via the 2-consecutive-failure flow) at 30 minutes. This is the canonical signal that explorer.testnet is showing live-but-stale data.",
     owner: OWNERS.adam,
     links: {
-      endpoint: "https://ormos.integralayer.com/api/faucet",
-      docs: "https://docs.integralayer.com",
-      repo: "https://github.com/Integra-layer/docs",
+      endpoint: "https://testnet.integralayer.com/rpc/status",
+      docs: "https://docs.integralayer.com/nodes",
     },
     commonIssues: [
       {
-        cause: "Faucet wallet out of test IRL tokens",
-        fix: "Top up the faucet wallet from the testnet genesis account or mint new tokens",
+        cause: "Validator set has no active producer (jailed, offline, or paused)",
+        fix: "SSH into the testnet validator host; check `intgd query staking validators`; unjail if needed: `intgd tx slashing unjail` (testnet keys)",
       },
       {
-        cause: "Caddy not routing /api/faucet correctly",
-        fix: "Check Caddyfile route; ensure handle_path strips /api/faucet prefix before proxying",
+        cause: "Genuine consensus halt — quorum lost",
+        fix: "Review CometBFT logs on the gateway: `journalctl -u intgd -n 200`. Restart the daemon if peers can't be reached.",
       },
       {
-        cause: "Cosmos RPC dependency down",
-        fix: "Faucet cannot broadcast transactions without RPC; fix testnet-cosmos-rpc-ormos first",
+        cause: "RPC reachable but lying about timestamp (clock skew)",
+        fix: "Compare blockHeight here vs testnet-cosmos-rpc — if heights match but ages differ, the host clock is wrong; sync NTP.",
       },
     ],
-    tags: ["API", "Caddy", "AWS"],
+    tags: ["CometBFT", "Freshness", "Hetzner"],
+  },
+  {
+    id: "mainnet-chain-freshness",
+    name: "Mainnet Chain Freshness",
+    category: "blockchain",
+    environment: "prod",
+    url: "https://mainnet.integralayer.com/rpc",
+    checkType: "chain-freshness",
+    timeout: 10000,
+    enabled: true,
+    dependsOn: ["mainnet-cosmos-rpc"],
+    impacts: ["explorer-mainnet"],
+    impactDescription:
+      "Mainnet explorer would show stale block data — user-facing trust impact",
+    description:
+      "Mainnet chain liveness — pages when the chain hasn't produced a block in over 30 minutes",
+    richDescription:
+      "Same probe as testnet-chain-freshness but pointed at the mainnet CometBFT RPC. Designed to remain quiet during normal block production (~5s blocks) and only fire on genuine multi-minute halts. Pages on Telegram at 30 minutes via the 2-consecutive-failure flow.",
+    owner: OWNERS.adam,
+    links: {
+      endpoint: "https://mainnet.integralayer.com/rpc/status",
+      docs: "https://docs.integralayer.com/nodes",
+    },
+    commonIssues: [
+      {
+        cause: "Validator set has insufficient voting power online (>1/3 down)",
+        fix: "Check validator-adam first; coordinate with other operators to bring nodes back. CometBFT halts at <2/3 active.",
+      },
+      {
+        cause: "Consensus deadlock after upgrade or fork",
+        fix: "Inspect CometBFT logs across validators for divergent app hashes; coordinate a re-sync or coordinated restart.",
+      },
+    ],
+    tags: ["CometBFT", "Freshness", "Hetzner"],
   },
 
   // -- Validators (mainnet) --------------------------------------------------

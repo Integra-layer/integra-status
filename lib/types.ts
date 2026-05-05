@@ -13,7 +13,8 @@ export type CheckType =
   | "graphql"
   | "cosmos-peer-check"
   | "explorer-sync"
-  | "explorer-deep-health";
+  | "explorer-deep-health"
+  | "chain-freshness";
 
 export type Status = "UP" | "DOWN" | "DEGRADED" | "DEPLOYING";
 export type Category =
