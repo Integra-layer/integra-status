@@ -853,6 +853,76 @@ async function checkExplorerDeepHealth(ep: Endpoint): Promise<CheckResult> {
 }
 
 // ---------------------------------------------------------------------------
+// Chain-freshness check — user-facing staleness alert for explorer monitoring.
+// Distinct from cosmos-rpc which trips at 60s; this trips at 5min DEGRADED /
+// 30min DOWN so it pages on prolonged stalls without flapping on transient
+// validator hiccups. Hits the Cosmos RPC /status endpoint and reads
+// sync_info.latest_block_time.
+// ---------------------------------------------------------------------------
+
+const CHAIN_FRESHNESS_DEGRADED_SECONDS = 5 * 60; // 5 minutes
+const CHAIN_FRESHNESS_DOWN_SECONDS = 30 * 60; // 30 minutes — Telegram alert fires here
+
+async function checkChainFreshness(ep: Endpoint): Promise<CheckResult> {
+  const details: Record<string, unknown> = {};
+  const start = Date.now();
+
+  const statusRes = await httpRequest(`${ep.url}/status`, {
+    timeout: ep.timeout,
+  });
+  if (statusRes.statusCode !== 200)
+    throw new Error(`HTTP ${statusRes.statusCode}`);
+
+  const statusData = JSON.parse(statusRes.body);
+  const syncInfo = statusData.result
+    ? statusData.result.sync_info
+    : statusData.sync_info;
+
+  if (!syncInfo || !syncInfo.latest_block_time) {
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      "RPC returned no sync_info / latest_block_time",
+    );
+  }
+
+  const blockTime = new Date(syncInfo.latest_block_time).getTime();
+  const ageSec = Math.round((Date.now() - blockTime) / 1000);
+  details.blockHeight = parseInt(syncInfo.latest_block_height, 10);
+  details.latestBlockTime = syncInfo.latest_block_time;
+  details.blockAgeSec = ageSec;
+
+  if (ageSec >= CHAIN_FRESHNESS_DOWN_SECONDS) {
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      `Chain stalled — last block ${formatAge(ageSec)} ago`,
+    );
+  }
+  if (ageSec >= CHAIN_FRESHNESS_DEGRADED_SECONDS) {
+    return buildResult(
+      ep,
+      "DEGRADED",
+      Date.now() - start,
+      details,
+      `Chain may be lagging — last block ${formatAge(ageSec)} ago`,
+    );
+  }
+  return buildResult(ep, "UP", Date.now() - start, details);
+}
+
+function formatAge(sec: number): string {
+  if (sec < 60) return `${sec}s`;
+  if (sec < 3600) return `${Math.round(sec / 60)}m`;
+  if (sec < 86400) return `${Math.round(sec / 3600)}h`;
+  return `${Math.round(sec / 86400)}d`;
+}
+
+// ---------------------------------------------------------------------------
 // Check dispatch
 // ---------------------------------------------------------------------------
 
@@ -872,6 +942,7 @@ const CHECK_FNS: Record<CheckType, CheckFn> = {
   "cosmos-peer-check": checkCosmosPeer,
   "explorer-sync": checkExplorerSync,
   "explorer-deep-health": checkExplorerDeepHealth,
+  "chain-freshness": checkChainFreshness,
 };
 
 export async function runCheck(ep: Endpoint): Promise<CheckResult> {
