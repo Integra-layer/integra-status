@@ -631,7 +631,7 @@ export const ENDPOINTS: Endpoint[] = [
     environment: "dev",
     url: "https://testnet.integralayer.com/rpc",
     checkType: "chain-freshness",
-    timeout: 10000,
+    timeout: 20000, // /status response on Helsinki gateway can take 4-9s under load — 10s tripped false-positive DOWN. Block age threshold (>30min) is the real signal.
     enabled: true,
     dependsOn: ["testnet-cosmos-rpc"],
     impacts: ["explorer-testnet"],
