@@ -239,15 +239,14 @@ describe("getEndpoint", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Mainnet retirement gate — mainnet was permanently retired; the project is
-// testnet-only going forward. If anyone re-enables a mainnet probe by mistake,
-// this test is the last line of defence against the alert channel exploding.
-// To bring mainnet back you'd need to remove this gate AND restore the DNS,
-// validators, gateway, and explorer infrastructure — at which point updating
-// this test should be the easy part.
+// Retirement gate — these endpoints were permanently retired, either with the
+// mainnet shutdown or as part of service consolidations (notifications →
+// dashboard-api SNS, dev tier deprecations). Re-enabling one without first
+// confirming the underlying infrastructure is back will explode the alert
+// channel. Update this test only after the resource is genuinely restored.
 // ---------------------------------------------------------------------------
 
-describe("mainnet endpoints — retirement gate", () => {
+describe("retired endpoints — retirement gate", () => {
   const retiredMainnetIds = [
     "mainnet-evm-rpc",
     "mainnet-evm-ws",
@@ -266,26 +265,30 @@ describe("mainnet endpoints — retirement gate", () => {
     "blockscout-mainnet",
     "explorer-mainnet-sync",
     "explorer-mainnet-deep-health",
+    // Service consolidations (separate from mainnet retirement)
+    "notification-api-prod", // → folded into dashboard-api via AWS SNS
+    "notification-api-dev", // → folded into dashboard-api-dev via AWS SNS
+    "city-api-dev", // App Runner instance deprovisioned; confirm with Kalki if a new dev URL exists
   ];
 
-  it("all retired mainnet entries stay disabled", () => {
+  it("all retired entries stay disabled", () => {
     for (const id of retiredMainnetIds) {
       const ep = getEndpoint(id);
-      expect(ep, `retired mainnet entry "${id}" missing from registry`).toBeTruthy();
+      expect(ep, `retired entry "${id}" missing from registry`).toBeTruthy();
       expect(
         ep!.enabled,
-        `retired mainnet entry "${id}" is enabled — mainnet has been retired, the project is testnet-only`,
+        `retired entry "${id}" is enabled — confirm the underlying infrastructure is genuinely restored before re-enabling`,
       ).toBe(false);
     }
   });
 
-  it("APP_GROUPS reference no retired mainnet IDs", () => {
+  it("APP_GROUPS reference no retired IDs", () => {
     const retiredSet = new Set(retiredMainnetIds);
     for (const group of APP_GROUPS) {
       for (const epId of group.endpoints) {
         expect(
           retiredSet.has(epId),
-          `app group "${group.id}" references retired mainnet endpoint "${epId}"`,
+          `app group "${group.id}" references retired endpoint "${epId}"`,
         ).toBe(false);
       }
     }

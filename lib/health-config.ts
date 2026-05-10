@@ -287,8 +287,6 @@ export const APP_GROUPS: AppGroup[] = [
       "dashboard-dev",
       "dashboard-api-prod",
       "dashboard-api-dev",
-      "notification-api-prod",
-      "notification-api-dev",
       "price-api",
     ],
   },
@@ -311,7 +309,7 @@ export const APP_GROUPS: AppGroup[] = [
     name: "City of Integra",
     icon: "\uD83C\uDFD9\uFE0F",
     description: "Gamified city builder experience and game backend",
-    endpoints: ["city-prod", "city-dev", "city-api-prod", "city-api-dev"],
+    endpoints: ["city-prod", "city-dev", "city-api-prod"],
   },
   {
     id: "portal",
@@ -899,7 +897,7 @@ export const ENDPOINTS: Endpoint[] = [
     description:
       "Dashboard backend — auth, assets, XP, staking, bulk imports (75+ endpoints)",
     richDescription:
-      "The primary backend powering the Integra Dashboard with 75+ REST API endpoints, built with NestJS, PostgreSQL, and JWT authentication. Handles portfolio management, staking position tracking, XP/points integration, asset management, bulk CSV imports, and notification preferences. The production Dashboard frontend is 100% dependent on this — if it goes down, users see a blank dashboard. Depends on the Absinthe XP API for points and leaderboard data. Deep health checks verify database connectivity and cache availability.",
+      "The primary backend powering the Integra Dashboard with 75+ REST API endpoints, built with NestJS, PostgreSQL, and JWT authentication. Handles portfolio management, staking position tracking, XP/points integration, asset management, bulk CSV imports, notification preferences, and direct AWS SNS dispatch for SMS/email notifications (consolidated from the retired notification-api). The production Dashboard frontend is 100% dependent on this — if it goes down, users see a blank dashboard. Depends on the Absinthe XP API for points and leaderboard data.",
     owner: OWNERS.nawar,
     links: {
       endpoint: "https://dashboard-apis.integralayer.com",
@@ -949,20 +947,20 @@ export const ENDPOINTS: Endpoint[] = [
   },
   {
     id: "notification-api-prod",
-    name: "Notification API",
+    name: "Notification API [RETIRED]",
     category: "apis",
     environment: "prod",
     url: "https://production-apis.integralayer.com",
     checkType: "deep-health",
     healthUrl: "https://production-apis.integralayer.com/health",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // Retired — notifications consolidated into dashboard-api via AWS SNS. No standalone notification-api app exists in integra-backend (only apps/dashboard-api and apps/passport-api). Entry kept as historical reference.
     dependsOn: [],
     impacts: ["dashboard-prod"],
-    impactDescription: "Dashboard notifications and alerts stop working",
-    description: "Push notifications and alerts for dashboard events",
+    impactDescription: "Notification API was retired — dashboard-api now sends notifications directly via AWS SNS",
+    description: "Notifications consolidated into dashboard-api (AWS SNS) — standalone service retired",
     richDescription:
-      "Push notification service built with NestJS, responsible for delivering real-time alerts to Dashboard users for staking rewards, governance proposal updates, transaction confirmations, and account activity. Processes event triggers from the Dashboard API and dispatches notifications via push and in-app channels. If this service goes down, users miss time-sensitive alerts about their staking rewards and governance votes. Deep health checks monitor database and queue connectivity.",
+      "Standalone notification service that previously delivered Dashboard alerts (staking rewards, governance updates, transaction confirmations). Retired and consolidated into the dashboard-api monorepo: notifications are now dispatched directly from apps/dashboard-api via AWS SNS (see AWS_SNS_TOPIC_ARN in integra-backend). DNS for production-apis.integralayer.com has been removed.",
     owner: OWNERS.nawar,
     links: { endpoint: "https://production-apis.integralayer.com" },
     commonIssues: [
@@ -983,20 +981,20 @@ export const ENDPOINTS: Endpoint[] = [
   },
   {
     id: "notification-api-dev",
-    name: "Notification API (Dev)",
+    name: "Notification API (Dev) [RETIRED]",
     category: "apis",
     environment: "dev",
     url: "https://develop-apis.integralayer.com",
     checkType: "deep-health",
     healthUrl: "https://develop-apis.integralayer.com/health",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // Retired — same consolidation as notification-api-prod. Dev notifications run through dashboard-api-dev + AWS SNS. develop-apis.integralayer.com DNS removed.
     dependsOn: [],
     impacts: ["dashboard-dev"],
-    impactDescription: "Dev dashboard notifications stop working",
-    description: "Notification service (dev) — testing notifications",
+    impactDescription: "Dev notification API was retired — dashboard-api-dev now sends notifications directly via AWS SNS",
+    description: "Notifications consolidated into dashboard-api-dev (AWS SNS) — standalone service retired",
     richDescription:
-      "Development instance of the Notification API, used for testing notification delivery logic, alert templates, and event trigger configurations before production deployment. Runs against a separate dev database and test notification channels. Essential for validating that new notification types render correctly and trigger at the right events. If down, the dev Dashboard loses notification functionality, blocking QA on notification-related features.",
+      "Development instance of the standalone notification service. Retired alongside the prod equivalent — dev notifications now flow through dashboard-api-dev via AWS SNS. develop-apis.integralayer.com DNS has been removed.",
     owner: OWNERS.nawar,
     links: { endpoint: "https://develop-apis.integralayer.com" },
     commonIssues: deepHealthApiIssues,
@@ -1042,20 +1040,20 @@ export const ENDPOINTS: Endpoint[] = [
   },
   {
     id: "city-api-dev",
-    name: "City of Integra API (Dev)",
+    name: "City of Integra API (Dev) [RETIRED]",
     category: "apis",
     environment: "dev",
     url: "https://ygmwadph3x.ap-south-1.awsapprunner.com",
     checkType: "deep-health",
     healthUrl: "https://ygmwadph3x.ap-south-1.awsapprunner.com/health",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // App Runner instance ygmwadph3x deprovisioned (NXDOMAIN). City prod (ng6mpgxjz7) still active. Confirm with Kalki whether a new dev backend exists or if this tier was permanently retired; flip back to true with the new URL if it's just been migrated.
     dependsOn: [],
     impacts: ["city-dev"],
-    impactDescription: "Dev city builder unavailable",
-    description: "City of Integra game backend (dev)",
+    impactDescription: "Dev city backend retired — App Runner instance deprovisioned",
+    description: "City of Integra dev backend retired — confirm with Kalki if a new dev URL exists",
     richDescription:
-      "Development instance of the City of Integra game backend on AWS App Runner (Mumbai), used for testing new game mechanics, balance tuning, feature prototyping, and QA before production release. Runs against a separate dev database with test game state. If down, Kalki and the game team cannot test new features or validate bug fixes. Also used for load testing game logic before mainnet events.",
+      "Former dev instance of the City of Integra game backend on AWS App Runner (Mumbai). The App Runner service ygmwadph3x.ap-south-1.awsapprunner.com has been deprovisioned (NXDOMAIN). City prod (ng6mpgxjz7) is still serving v0.2.9. The polytrade-finance/city-of-integra repo's recent commits (SSR caching, testnet banner) don't show a migration to a new dev backend — likely the dev tier was retired since the game runs locally for development. If a new dev URL exists, update the entry and re-enable.",
     owner: OWNERS.kalki,
     links: {
       endpoint: "https://ygmwadph3x.ap-south-1.awsapprunner.com",
