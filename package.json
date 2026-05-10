@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "@types/d3-force": "^3.0.10",
-    "@vercel/kv": "^3.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "d3-force": "^3.0.0",
