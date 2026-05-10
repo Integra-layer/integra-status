@@ -265,7 +265,12 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
           </div>
 
           {viewMode === "simple" ? (
-            <SimpleView data={data} categories={categories} />
+            <SimpleView
+              data={data}
+              categories={categories}
+              statusFilter={statusFilter}
+              onClearStatusFilter={() => setStatusFilter("all")}
+            />
           ) : (
             <>
               {/* Category sections */}

@@ -7,22 +7,37 @@ import { HealthRing } from "./simple/health-ring";
 import { StatCard } from "./simple/stat-card";
 import { CategoryCard, type CategoryStats } from "./simple/category-card";
 import type { HealthSummary, Category } from "@/lib/types";
+import type { StatusFilter } from "./summary-bar";
 
 type SimpleViewProps = {
   data: HealthSummary;
   categories: Category[];
+  /** Status filter from the summary cards. Filters category rows; header
+   * stats stay on the global counts so the user keeps the big picture. */
+  statusFilter?: StatusFilter;
+  onClearStatusFilter?: () => void;
 };
 
-export function SimpleView({ data, categories }: SimpleViewProps) {
+export function SimpleView({
+  data,
+  categories,
+  statusFilter = "all",
+  onClearStatusFilter,
+}: SimpleViewProps) {
   const allUp = data.down === 0 && data.degraded === 0;
   const hasDown = data.down > 0;
 
-  // Per-category stats
+  // Per-category stats — applies the status filter from the summary cards.
+  // Categories with zero matching results drop out of the row list.
   const categoryStats: CategoryStats[] = useMemo(
     () =>
       categories
         .map((cat) => {
-          const results = data.results.filter((r) => r.category === cat);
+          const allCatResults = data.results.filter((r) => r.category === cat);
+          const results =
+            statusFilter === "all"
+              ? allCatResults
+              : allCatResults.filter((r) => r.status === statusFilter);
           if (results.length === 0) return null;
           return {
             category: cat,
@@ -34,7 +49,7 @@ export function SimpleView({ data, categories }: SimpleViewProps) {
           };
         })
         .filter((s): s is CategoryStats => s !== null),
-    [data.results, categories],
+    [data.results, categories, statusFilter],
   );
 
   // Quick stats
@@ -209,6 +224,24 @@ export function SimpleView({ data, categories }: SimpleViewProps) {
             index={index}
           />
         ))}
+        {categoryStats.length === 0 && (
+          <div className="rounded-xl border border-border-strong/30 bg-surface-card p-8 text-center">
+            <p className="text-sm text-text-muted">
+              {statusFilter !== "all"
+                ? `No endpoints with status ${statusFilter}.`
+                : "No endpoints to display."}
+            </p>
+            {statusFilter !== "all" && onClearStatusFilter && (
+              <button
+                type="button"
+                onClick={onClearStatusFilter}
+                className="mt-3 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:underline"
+              >
+                Clear status filter
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
