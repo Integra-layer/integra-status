@@ -12,7 +12,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { Header } from "@/components/header";
-import { SummaryBar } from "@/components/summary-bar";
+import { SummaryBar, type StatusFilter } from "@/components/summary-bar";
 import { SearchBar, type ViewMode } from "@/components/search-bar";
 import { SimpleView } from "@/components/simple-view";
 import { CategorySection } from "@/components/category-section";
@@ -66,6 +66,7 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
   const [activeEnvironment, setActiveEnvironment] = useState<
     Environment | "all"
   >("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [showTimeline, setShowTimeline] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("integra-timeline-open") === "true";
@@ -155,8 +156,12 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
     );
   }, []);
 
-  // Filter results by search query, active categories, and environment
+  // Filter results by search query, active categories, environment, and status.
+  // Status filter is driven by the clickable summary cards — "all" disables it.
   const filteredResults = data.results.filter((r) => {
+    if (statusFilter !== "all" && r.status !== statusFilter) {
+      return false;
+    }
     if (activeCategories.length > 0 && !activeCategories.includes(r.category)) {
       return false;
     }
@@ -226,6 +231,8 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
         degraded={data.degraded}
         down={data.down}
         deploying={data.deploying}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
       />
 
       {/* Screen reader announcement for critical alerts */}
@@ -285,8 +292,19 @@ export function DashboardClient({ data, categories }: DashboardClientProps) {
                 {categoryResults.length === 0 && (
                   <div className="rounded-xl border border-border-strong/30 bg-surface-card p-8 text-center">
                     <p className="text-sm text-text-muted">
-                      No endpoints match your search.
+                      {statusFilter !== "all"
+                        ? `No endpoints with status ${statusFilter}.`
+                        : "No endpoints match your search."}
                     </p>
+                    {statusFilter !== "all" && (
+                      <button
+                        type="button"
+                        onClick={() => setStatusFilter("all")}
+                        className="mt-3 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:underline"
+                      >
+                        Clear status filter
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
