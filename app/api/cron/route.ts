@@ -17,7 +17,7 @@ import {
   formatAlert,
   formatRecovery,
   formatGroupedAlert,
-  formatStatusOverview,
+  formatDailyDigest,
 } from "@/lib/telegram-messages";
 import { overviewKeyboard } from "@/lib/telegram-keyboards";
 import type { CheckResult, HealthSummary } from "@/lib/types";
@@ -190,7 +190,7 @@ export async function GET(request: Request) {
 
         await sendMessage(
           CHANNEL_ID,
-          formatStatusOverview(summary),
+          formatDailyDigest(summary),
           "HTML",
           overviewKeyboard(categoryCounts),
         );

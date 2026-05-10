@@ -1,4 +1,4 @@
-// lib/telegram-keyboards.ts — Inline keyboard builders for @IntegraWatchBot
+// lib/telegram-keyboards.ts — Inline keyboard builders for @IntegraHealthBot
 
 type InlineButton = {
   text: string;

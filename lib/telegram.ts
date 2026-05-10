@@ -1,4 +1,4 @@
-// lib/telegram.ts — Telegram Bot API wrapper for @IntegraWatchBot
+// lib/telegram.ts — Telegram Bot API wrapper for @IntegraHealthBot
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
 const API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
