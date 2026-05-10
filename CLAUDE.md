@@ -7,39 +7,44 @@ Real-time infrastructure status page for Integra Layer — blockchain, validator
 **Live**: https://status.integralayer.com
 **Bot**: @IntegraHealthBot (Telegram)
 
-## EC2 Deployment
+## Deployment
+
+The status page was migrated from the legacy AWS EC2 box (`3.92.110.107`, now decommissioned) to the **Vultr signer1** host. `status.integralayer.com` resolves to **`45.77.139.208`** (verify with `dig +short status.integralayer.com`).
 
 | Detail | Value |
 |--------|-------|
-| **EC2 IP** | `3.92.110.107` |
-| **SSH** | `ssh -i ~/.ssh/integra-validator-key.pem ubuntu@3.92.110.107` |
-| **App path** | `/opt/integra-status` (NOT `/home/ubuntu/`) |
+| **Host IP** | `45.77.139.208` (Vultr — same box that runs validator-signer1) |
+| **SSH** | `ssh -i ~/.ssh/integra root@45.77.139.208` (matches the validator commonIssues entries) |
+| **App path** | `/opt/integra-status` (verify on the box) |
 | **Branch** | `main` |
-| **DNS** | `status.integralayer.com` → Route53 A record → `3.92.110.107` |
+| **DNS** | `status.integralayer.com` → Route53 A record → `45.77.139.208` |
 | **Proxy** | Caddy reverse proxy (`status.integralayer.com { reverse_proxy localhost:3003 }`) |
-| **Systemd** | `integra-status.service` — runs `npx next start -p 3003` as ubuntu |
+| **Systemd** | `integra-status.service` — runs `npx next start -p 3003` |
 | **Env file** | `/opt/integra-status/.env.local` |
-| **Cron** | ubuntu crontab: `* * * * * curl ... http://localhost:3003/api/cron` |
-| **Monitor** | root crontab: `* * * * * /opt/integra-monitor/monitor.sh` (separate validator monitor) |
-| **Shared EC2** | Same box hosts: validator node, explorer v2, Blockscout, Hasura, Callisto |
+| **Cron** | system crontab: `* * * * * curl ... http://localhost:3003/api/cron` |
+| **Co-located** | Validator-signer1 testnet daemon on 26656/26657 (mainnet daemon retired). The legacy EC2 box that previously hosted explorer-v2 / Blockscout / Hasura / Callisto is decommissioned — those services are RETIRED in `health-config.ts`. |
+
+> **Mainnet retired (2026-05-10).** Mainnet has been permanently shut down — the project operates testnet-only going forward. `mainnet.integralayer.com` is NXDOMAIN, the Hetzner gateway (`89.167.88.24`) is decommissioned, and the legacy AWS archive node (`3.208.92.57` — used to host explorer-v2/Blockscout/Hasura/Callisto) is no longer in the testnet peer set. All mainnet entries in `lib/health-config.ts` stay in the registry as `enabled: false` for historical reference and are pruned from `APP_GROUPS`. The integrity test in `lib/__tests__/health-config.test.ts` enforces this gate — re-enabling a mainnet probe will fail CI.
+>
+> **Active testnet validators:** `Integra-Amsterdam` (Vultr `45.77.139.208`, also hosts the status page) and `Integra-SantaClara` (DigitalOcean `159.223.206.94`). Visible in `https://testnet.integralayer.com/rpc/net_info`.
 
 ### Deploy commands
 
 ```bash
 # Local — verify first
-npx tsc --noEmit && npm run build
+npx tsc --noEmit && npm run build && npm test
 git push origin main
 
-# EC2 — pull, build, restart
-ssh -i ~/.ssh/integra-validator-key.pem ubuntu@3.92.110.107
-cd /opt/integra-status && sudo git pull origin main && sudo npm run build && sudo systemctl restart integra-status
+# Host — pull, build, restart
+ssh -i ~/.ssh/integra root@45.77.139.208
+cd /opt/integra-status && git pull origin main && npm run build && systemctl restart integra-status
 ```
 
 ### One-liner deploy from local
 
 ```bash
-ssh -i ~/.ssh/integra-validator-key.pem ubuntu@3.92.110.107 \
-  "cd /opt/integra-status && sudo git pull origin main && sudo npm run build 2>&1 && sudo systemctl restart integra-status"
+ssh -i ~/.ssh/integra root@45.77.139.208 \
+  "cd /opt/integra-status && git pull origin main && npm run build 2>&1 && systemctl restart integra-status"
 ```
 
 ## Development
@@ -61,7 +66,7 @@ integra-status/
 │   ├── globals.css             # Tailwind v4 @theme + Integra brand tokens + animations
 │   ├── service/[id]/page.tsx   # Service detail: sparkline, deps, incidents, owner
 │   └── api/
-│       ├── health/route.ts     # Health check engine (55 enabled / 68 total, 11 check types)
+│       ├── health/route.ts     # Health check engine (43 enabled / 64 total, 14 check types — testnet-only)
 │       ├── cron/route.ts       # Cron: poll → detect transitions → Telegram alerts
 │       └── telegram/webhook/route.ts  # Bot commands + callback queries
 ├── components/
@@ -85,7 +90,7 @@ integra-status/
 ├── lib/
 │   ├── types.ts                # TypeScript types (Owner has telegram field)
 │   ├── health-config.ts        # 68 endpoints, OWNERS with Telegram handles, CTO_TELEGRAM
-│   ├── health.ts               # 11 check type implementations
+│   ├── health.ts               # 14 check type implementations
 │   ├── history.ts              # Ring buffer for sparklines/incidents (/tmp/integra-history.json)
 │   ├── local-kv.ts             # File-based KV store (/tmp/integra-kv.json) — replaces @vercel/kv
 │   ├── telegram.ts             # Telegram Bot API wrapper (sendMessage, setWebhook, etc.)
@@ -146,14 +151,16 @@ Every endpoint has an `owner` (defined in `OWNERS` in `lib/health-config.ts`). E
 
 ## Endpoint Categories
 
-68 total endpoints (55 enabled) across 5 categories:
+64 total endpoints (43 enabled, 21 disabled — see `enabled: false` comments for context) across 5 categories:
 
-| Category | Count | Examples |
-|----------|-------|---------|
-| blockchain | 14 | Mainnet/testnet EVM RPC, Cosmos RPC, REST/LCD, WebSocket |
-| validators | 4 | Validator 1-3 (DigitalOcean), Adam's node (AWS) |
-| apis | 14 | Dashboard API, Notification, City API, Passport, Supply, Pricing |
-| frontends | 16 | Explorer, Dashboard, City Builder, Docs, Staking, Portal, Blockscout |
+Counts reflect the testnet-only registry after mainnet retirement (run `npm test` to validate exact numbers — they're enforced by the integrity tests):
+
+| Category | Active | Examples |
+|----------|--------|----------|
+| blockchain | testnet-only | Testnet EVM RPC, Cosmos RPC, REST/LCD, chain-freshness pager (mainnet retired) |
+| validators | 2 | Integra-Amsterdam (Vultr 45.77.139.208), Integra-SantaClara (DO 159.223.206.94) |
+| apis | dashboard / notification / city / supply / pricing / explorer-testnet-backend | (Passport API disabled until next onboarding flow) |
+| frontends | explorer-testnet, dashboard, city, docs, staking, portal-testnet, blockscout-testnet | (mainnet explorer/blockscout/portal retired) |
 | external | 10 | GitHub, Vercel, Web3Auth, OpenAI, Alchemy, Twitter, Google OAuth |
 
 ### 11 Check Types
@@ -204,6 +211,6 @@ Bot: **@IntegraHealthBot** — 9 commands + inline keyboard navigation
 - **`vercel.json`** crons/functions config is ignored on EC2 — use system crontab instead
 - **No `@vercel/kv`** — replaced with `lib/local-kv.ts` (file-based). Don't add KV env vars.
 - **History + KV in `/tmp/`** reset on process restart — cron repopulates within minutes
-- **Two separate monitors on EC2**: (1) ubuntu crontab → `/api/cron` (status page alerts), (2) root crontab → `/opt/integra-monitor/monitor.sh` (validator health). Don't confuse them.
-- **Primary EVM RPC** points to `adamboudj.integralayer.com/rpc` (the old `evm.integralayer.com` URL has SSL issues)
-- **Shared EC2**: this box also runs the validator, explorer v2, Blockscout, Hasura, Callisto — be careful with disk/memory
+- **Status page host**: Vultr signer1 box at `45.77.139.208`. Same box runs the testnet validator daemon (Integra-Amsterdam) on 26656/26657 — be careful with disk/memory.
+- **Mainnet is retired** — `mainnet.integralayer.com` is NXDOMAIN. Don't add new mainnet probes; the retirement gate test in `lib/__tests__/health-config.test.ts` will fail. Testnet (`testnet.integralayer.com → 46.225.231.81` Helsinki) is the only live chain.
+- **Legacy EC2 box** (`3.92.110.107`, formerly hosted everything) is decommissioned. The legacy AWS archive box (`3.208.92.57`) used to host explorer-v2/Blockscout/Hasura/Callisto — also gone. Anything in the registry referencing those is `enabled: false` with a `[RETIRED]` or `[OFFLINE]` suffix.

@@ -296,18 +296,13 @@ export const APP_GROUPS: AppGroup[] = [
     id: "explorer",
     name: "Explorer",
     icon: "\uD83D\uDD0D",
-    description: "Block explorer for transactions, blocks, and validators",
+    description: "Block explorer for transactions, blocks, and validators (testnet)",
     endpoints: [
-      "explorer-mainnet",
       "explorer-testnet",
       "blockscout-testnet",
-      "mainnet-cosmos-rpc",
-      "mainnet-cosmos-rest",
       "testnet-cosmos-rpc",
       "testnet-cosmos-rest",
-      "mainnet-chain-freshness",
       "testnet-chain-freshness",
-      "explorer-mainnet-backend",
       "explorer-testnet-backend",
     ],
   },
@@ -329,11 +324,8 @@ export const APP_GROUPS: AppGroup[] = [
     id: "blockchain",
     name: "Blockchain Nodes",
     icon: "\u26D3\uFE0F",
-    description: "EVM and Cosmos RPC/REST nodes for mainnet and testnet",
+    description: "EVM and Cosmos RPC/REST nodes (testnet \u2014 mainnet retired)",
     endpoints: [
-      "mainnet-evm-rpc",
-      "mainnet-cosmos-rpc",
-      "mainnet-cosmos-rest",
       "testnet-evm-rpc",
       "testnet-cosmos-rpc",
       "testnet-cosmos-rest",
@@ -343,8 +335,8 @@ export const APP_GROUPS: AppGroup[] = [
     id: "validators",
     name: "Validators",
     icon: "\u26A1",
-    description: "4 mainnet validators for block production and consensus (~691k IRL each)",
-    endpoints: ["validator-gateway", "validator-signer1", "validator-signer2", "validator-archive"],
+    description: "Active testnet validators (mainnet retired)",
+    endpoints: ["validator-signer1", "validator-signer2"],
   },
   {
     id: "sites",
@@ -358,7 +350,6 @@ export const APP_GROUPS: AppGroup[] = [
       "staking",
       "datastore",
       "integra-connect",
-      "portal-mainnet",
       "portal-testnet",
       "status-page",
     ],
@@ -397,7 +388,7 @@ export const ENDPOINTS: Endpoint[] = [
     url: "https://mainnet.integralayer.com/evm",
     checkType: "evm-rpc",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // Mainnet retired — testnet-only operation. Entry kept as historical reference.
     expectedChainId: "0x6669",
     dependsOn: [],
     impacts: ["dashboard-api-prod", "explorer-v2"],
@@ -454,7 +445,7 @@ export const ENDPOINTS: Endpoint[] = [
     url: "https://mainnet.integralayer.com/rpc",
     checkType: "cosmos-rpc",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // Mainnet retired — testnet-only operation. Entry kept as historical reference.
     dependsOn: ["portal-mainnet"],
     impacts: ["explorer-mainnet"],
     impactDescription: "Mainnet explorer loses real-time block data",
@@ -500,7 +491,7 @@ export const ENDPOINTS: Endpoint[] = [
     url: "https://mainnet.integralayer.com/api",
     checkType: "cosmos-rest",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // Mainnet retired — testnet-only operation. Entry kept as historical reference.
     dependsOn: ["portal-mainnet"],
     impacts: ["explorer-mainnet"],
     impactDescription: "Mainnet explorer loses validator and governance data",
@@ -681,7 +672,7 @@ export const ENDPOINTS: Endpoint[] = [
     url: "https://mainnet.integralayer.com/rpc",
     checkType: "chain-freshness",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // Mainnet retired — chain-freshness pager has nothing to monitor.
     dependsOn: ["mainnet-cosmos-rpc"],
     impacts: ["explorer-mainnet"],
     impactDescription:
@@ -717,15 +708,15 @@ export const ENDPOINTS: Endpoint[] = [
     url: "https://mainnet.integralayer.com/rpc",
     checkType: "cosmos-rpc",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // Mainnet retired — Hetzner gateway 89.167.88.24 decommissioned. Entry kept as historical reference.
     dependsOn: [],
     impacts: ["mainnet-evm-rpc", "mainnet-cosmos-rpc", "mainnet-cosmos-rest"],
     impactDescription:
-      "Primary gateway node — all mainnet.integralayer.com endpoints go down if this validator fails",
+      "Mainnet retired — entry kept as historical reference for the former Hetzner gateway",
     description:
-      "Integra-Gateway validator (Hetzner) — primary mainnet gateway and block producer",
+      "Integra-Gateway (Hetzner) [RETIRED] — former mainnet gateway and block producer",
     richDescription:
-      "Primary mainnet validator and gateway node hosted on Hetzner (89.167.88.24). Serves as the main entry point for all mainnet.integralayer.com endpoints via Caddy reverse proxy. One of four validators with ~691k IRL voting power (~25% of network). Home dir: ~/.intgd, P2P port: 26656. If this node goes down, all mainnet RPC/REST/EVM endpoints become unreachable AND the network loses 25% voting power.",
+      "Former primary mainnet validator and gateway node hosted on Hetzner (89.167.88.24). Was the main entry point for mainnet.integralayer.com via Caddy reverse proxy. RETIRED with the mainnet shutdown — host decommissioned and DNS removed. Testnet operation runs from the Helsinki gateway (46.225.231.81) instead.",
     owner: OWNERS.adam,
     links: { endpoint: "http://89.167.88.24:26657" },
     commonIssues: [
@@ -746,97 +737,97 @@ export const ENDPOINTS: Endpoint[] = [
   },
   {
     id: "validator-signer1",
-    name: "Integra-Signer1 (Vultr)",
+    name: "Integra-Amsterdam (Vultr)",
     category: "validators",
-    environment: "prod",
-    url: "http://45.77.139.208:36657",
+    environment: "dev",
+    url: "http://45.77.139.208:26657",
     checkType: "cosmos-peer-check",
     peerIp: "45.77.139.208",
-    publicRpc: "https://mainnet.integralayer.com/rpc",
+    publicRpc: "https://testnet.integralayer.com/rpc",
     timeout: 10000,
     enabled: true,
     dependsOn: [],
     impacts: [],
     impactDescription:
-      "Network loses ~25% voting power — chain continues but finality degrades",
+      "Active testnet validator — losing this peer reduces testnet voting power",
     description:
-      "Integra-Signer1 validator (Vultr) — block signing and consensus",
+      "Integra-Amsterdam validator (Vultr) — active testnet block signer",
     richDescription:
-      "Second mainnet validator hosted on Vultr (45.77.139.208). Runs both testnet and mainnet on the same server with port offset +10000 for mainnet (P2P 36656, RPC 36657). Home dir: ~/.intgd-mainnet. One of four validators with ~691k IRL voting power. Provides multi-cloud redundancy (Vultr vs Hetzner/DO/AWS). If offline, network loses 25% voting power but continues producing blocks.",
+      "Active testnet validator hosted on Vultr (45.77.139.208), moniker 'Integra-Amsterdam' — confirmed live in the testnet RPC peer set. P2P port 26656, RPC 26657, home dir ~/.intgd. Co-hosts the integra-status page on the same box (port 3003 behind Caddy). Originally also ran a mainnet daemon on +10000 port offset, but mainnet has been retired and only the testnet daemon is active.",
     owner: OWNERS.adam,
     links: { endpoint: "http://45.77.139.208:36657" },
     commonIssues: [
       {
-        cause: "Validator not in peer list — node may be offline",
-        fix: "SSH in: ssh -i ~/.ssh/integra root@45.77.139.208; check: sudo systemctl status intgd-mainnet",
+        cause: "Validator not in testnet peer list — node may be offline",
+        fix: "SSH in: ssh -i ~/.ssh/integra root@45.77.139.208; check: sudo systemctl status intgd",
       },
       {
-        cause: "Port confusion — mainnet uses +10000 offset (36656/36657), testnet uses default (26656/26657)",
-        fix: "Verify correct ports: mainnet P2P 36656, RPC 36657; testnet P2P 26656, RPC 26657",
+        cause: "Process down or stuck — check daemon health",
+        fix: "journalctl -u intgd -n 100; verify P2P (26656) and RPC (26657) listeners with ss -tlnp",
       },
       {
         cause: "Validator jailed due to downtime",
-        fix: "Check jail status via mainnet RPC; unjail with: intgd tx slashing unjail --home ~/.intgd-mainnet",
+        fix: "Check jail status via testnet RPC; unjail with: intgd tx slashing unjail",
       },
     ],
     tags: ["CometBFT", "Vultr"],
   },
   {
     id: "validator-signer2",
-    name: "Integra-Signer2 (DigitalOcean)",
+    name: "Integra-SantaClara (DigitalOcean)",
     category: "validators",
-    environment: "prod",
-    url: "http://159.223.206.94:36657",
+    environment: "dev",
+    url: "http://159.223.206.94:26657",
     checkType: "cosmos-peer-check",
     peerIp: "159.223.206.94",
-    publicRpc: "https://mainnet.integralayer.com/rpc",
+    publicRpc: "https://testnet.integralayer.com/rpc",
     timeout: 10000,
     enabled: true,
     dependsOn: [],
     impacts: [],
     impactDescription:
-      "Network loses ~25% voting power — chain continues but finality degrades",
+      "Active testnet validator — losing this peer reduces testnet voting power",
     description:
-      "Integra-Signer2 validator (DigitalOcean) — block signing and consensus",
+      "Integra-SantaClara validator (DigitalOcean) — active testnet block signer",
     richDescription:
-      "Third mainnet validator hosted on DigitalOcean (159.223.206.94). Like Signer1, runs both testnet and mainnet with port offset +10000 for mainnet (P2P 36656, RPC 36657). Home dir: ~/.intgd-mainnet. One of four validators with ~691k IRL voting power. Provides geographic and cloud-provider diversity in the validator set.",
+      "Active testnet validator hosted on DigitalOcean (159.223.206.94), moniker 'Integra-SantaClara' — confirmed live in the testnet RPC peer set. P2P port 26656, RPC 26657, home dir ~/.intgd. Provides cloud-provider diversity alongside the Vultr Amsterdam node. Originally also ran a mainnet daemon on +10000 port offset, but mainnet has been retired and only the testnet daemon is active.",
     owner: OWNERS.adam,
     links: { endpoint: "http://159.223.206.94:36657" },
     commonIssues: [
       {
-        cause: "Validator not in peer list — node may be offline",
-        fix: "SSH in: ssh -i ~/.ssh/integra root@159.223.206.94; check: sudo systemctl status intgd-mainnet",
+        cause: "Validator not in testnet peer list — node may be offline",
+        fix: "SSH in: ssh -i ~/.ssh/integra root@159.223.206.94; check: sudo systemctl status intgd",
       },
       {
-        cause: "Port confusion — mainnet uses +10000 offset (36656/36657), testnet uses default (26656/26657)",
-        fix: "Verify correct ports: mainnet P2P 36656, RPC 36657; testnet P2P 26656, RPC 26657",
+        cause: "Process down or stuck — check daemon health",
+        fix: "journalctl -u intgd -n 100; verify P2P (26656) and RPC (26657) listeners with ss -tlnp",
       },
       {
         cause: "Validator jailed due to downtime",
-        fix: "Check jail status via mainnet RPC; unjail with: intgd tx slashing unjail --home ~/.intgd-mainnet",
+        fix: "Check jail status via testnet RPC; unjail with: intgd tx slashing unjail",
       },
     ],
     tags: ["CometBFT", "DigitalOcean"],
   },
   {
     id: "validator-archive",
-    name: "Integra-Archive (AWS)",
+    name: "Integra-Archive (AWS) [RETIRED]",
     category: "validators",
-    environment: "prod",
+    environment: "dev",
     url: "http://3.208.92.57:26657",
     checkType: "cosmos-peer-check",
     peerIp: "3.208.92.57",
-    publicRpc: "http://45.77.139.208:36657",
+    publicRpc: "https://testnet.integralayer.com/rpc",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // Retired with the mainnet shutdown. Entry kept as historical reference.
     dependsOn: [],
     impacts: [],
     impactDescription:
-      "Network loses ~25% voting power — chain continues but finality degrades. Archive node also hosts Explorer v2, Blockscout, and status page.",
+      "Mainnet retired — entry kept as historical reference for the former AWS archive node",
     description:
-      "Integra-Archive validator (AWS) — block signing, archive node, explorer host",
+      "Integra-Archive (AWS) [RETIRED] — former mainnet archive node",
     richDescription:
-      "Fourth mainnet validator hosted on AWS EC2 (3.208.92.57). One of four validators with ~691k IRL voting power. Also serves as the archive node and hosts Explorer v2, Blockscout, Hasura, Callisto, and the status page. Home dir: ~/.intgd, P2P port: 26656. SSH: ssh -i ~/.ssh/integra-validator-key.pem ubuntu@3.208.92.57. If offline, the network loses 25% voting power AND all explorer/status services go down.",
+      "Former mainnet archive node on AWS EC2 (3.208.92.57). Hosted Explorer v2, Blockscout, Hasura, and Callisto — all of those services were retired with the mainnet shutdown (scan / blockscout / adamboudj DNS removed). The validator daemon is no longer running and the host does not appear in the testnet RPC peer set. Active testnet operation runs on Integra-Amsterdam (Vultr) and Integra-SantaClara (DigitalOcean).",
     owner: OWNERS.adam,
     links: { endpoint: "http://3.208.92.57:26657" },
     commonIssues: [
@@ -1207,13 +1198,13 @@ export const ENDPOINTS: Endpoint[] = [
   // -- Frontends & Explorers -------------------------------------------------
   {
     id: "explorer-mainnet",
-    name: "Explorer (Mainnet)",
+    name: "Explorer (Mainnet) [RETIRED]",
     category: "frontends",
     environment: "prod",
     url: "https://explorer.integralayer.com",
     checkType: "http-get",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // Mainnet retired — explorer has no chain to display. Entry kept as historical reference.
     dependsOn: ["mainnet-cosmos-rpc", "mainnet-cosmos-rest"],
     impacts: [],
     description:
@@ -1265,7 +1256,7 @@ export const ENDPOINTS: Endpoint[] = [
     impacts: [],
     description: "Explorer v2 — Big Dipper fork with Cosmos + EVM indexing",
     richDescription:
-      "Full-rewrite block explorer (Big Dipper 2.0 fork) deployed on Adam's mainnet validator node (3.92.110.107) via Caddy reverse proxy. Built with Next.js 16 + React 19 + Tailwind v4 + Apollo Client 3. Backed by PostgreSQL 15 (54 tables), Hasura v2.29.0 GraphQL engine, and the Callisto Go indexer for both Cosmos and EVM data. Features gas analytics, address labels, contract verification, and validator staking views. Depends on Adam's CometBFT RPC and EVM RPC endpoints for live indexing.",
+      "Full-rewrite block explorer (Big Dipper 2.0 fork) that ran on the legacy AWS archive node (3.208.92.57) via Caddy reverse proxy. Built with Next.js 16 + React 19 + Tailwind v4 + Apollo Client 3. Backed by PostgreSQL 15 (54 tables), Hasura v2.29.0 GraphQL engine, and the Callisto Go indexer for both Cosmos and EVM data. Currently OFFLINE — scan.integralayer.com DNS removed and the indexer stack on the archive node is no longer running.",
     owner: OWNERS.adam,
     links: {
       endpoint: "https://scan.integralayer.com",
@@ -1337,7 +1328,7 @@ export const ENDPOINTS: Endpoint[] = [
     description:
       "Blockscout EVM explorer for mainnet — EVM transactions, tokens, contracts",
     richDescription:
-      "Blockscout EVM block explorer for Integra mainnet (chain ID 26217), deployed via Docker Compose on Adam's validator EC2 (3.92.110.107). Backend indexes EVM blocks, transactions, token transfers, and contract interactions via JSON-RPC. Frontend provides transaction search, address pages, token lists, gas tracker, and contract verification. Caddy reverse proxies blockscout.integralayer.com to the frontend (port 3002) and API (port 4000). Depends on the local EVM RPC node for indexing.",
+      "Blockscout EVM block explorer for Integra mainnet (chain ID 26217), formerly deployed via Docker Compose on the AWS archive node (3.208.92.57). Backend indexed EVM blocks, transactions, token transfers, and contract interactions via JSON-RPC. Currently OFFLINE — blockscout.integralayer.com DNS removed and Docker stack is no longer running on the archive node.",
     owner: OWNERS.adam,
     links: {
       endpoint: "https://blockscout.integralayer.com",
@@ -1407,16 +1398,16 @@ export const ENDPOINTS: Endpoint[] = [
     dependsOn: [],
     impacts: [],
     description:
-      "Infrastructure status dashboard — real-time health monitoring (EC2)",
+      "Infrastructure status dashboard — real-time health monitoring (Vultr)",
     richDescription:
-      "The Integra infrastructure status page deployed on EC2 (3.92.110.107) at status.integralayer.com via Caddy reverse proxy (port 3003). Monitors 55+ endpoints across blockchain nodes, validators, APIs, frontends, and external services. Self-monitoring ensures the status page itself is accessible when users need to check system health during incidents. Telegram bot @IntegraHealthBot sends alerts on status transitions.",
+      "The Integra infrastructure status page co-hosted on the Vultr signer1 box (45.77.139.208) at status.integralayer.com via Caddy reverse proxy (port 3003). Monitors all enabled endpoints across blockchain nodes, validators, APIs, frontends, and external services. Self-monitoring ensures the status page itself is accessible when users need to check system health during incidents. Telegram bot @IntegraHealthBot sends alerts on status transitions.",
     owner: OWNERS.adam,
     links: {
       endpoint: "https://status.integralayer.com",
       repo: "https://github.com/Integra-layer/integra-status",
     },
-    commonIssues: vercelFrontendIssues,
-    tags: ["Vercel"],
+    commonIssues: httpReachableApiIssues,
+    tags: ["Caddy", "Vultr"],
   },
   {
     id: "integra-connect",
@@ -1431,7 +1422,7 @@ export const ENDPOINTS: Endpoint[] = [
     impacts: [],
     description: "Validator dashboard — chain status, health, wallet connect",
     richDescription:
-      "Validator dashboard web app built with Next.js 15 + TypeScript + Tailwind + shadcn/ui, deployed on Vercel. Features chain status monitoring, health dashboard, wallet connect (MetaMask/Keplr/OKX), and a mainnet/testnet network toggle. Provides validators and stakers with a quick overview of network health and their staking positions across both networks.",
+      "Validator dashboard web app built with Next.js 15 + TypeScript + Tailwind + shadcn/ui, deployed on Vercel. Features chain status monitoring, health dashboard, and wallet connect (MetaMask/Keplr/OKX). Pinned to testnet after the mainnet retirement — the mainnet network toggle was disabled in the upstream integra-portal repo.",
     owner: OWNERS.adam,
     links: {
       endpoint: "https://integra-connect.vercel.app",
@@ -1448,7 +1439,7 @@ export const ENDPOINTS: Endpoint[] = [
     url: "https://mainnet.integralayer.com",
     checkType: "http-get",
     timeout: 15000,
-    enabled: true,
+    enabled: false, // Mainnet retired — portal frontend retired with the chain.
     dependsOn: ["mainnet-evm-rpc", "mainnet-cosmos-rpc-adam"],
     impacts: [],
     description:
@@ -2163,13 +2154,13 @@ export const ENDPOINTS: Endpoint[] = [
   },
   {
     id: "explorer-mainnet-backend",
-    name: "Mainnet Explorer Backend",
+    name: "Mainnet Explorer Backend [RETIRED]",
     category: "apis",
     environment: "prod",
     url: "https://explorer.integralayer.com/api/status",
     checkType: "http-reachable", // Returns 401 (auth-gated) but proves backend is alive
     timeout: 10000,
-    enabled: true,
+    enabled: false, // Mainnet retired — explorer backend retired with the chain.
     dependsOn: ["explorer-mainnet"],
     impacts: [],
     description:
