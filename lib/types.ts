@@ -14,7 +14,8 @@ export type CheckType =
   | "cosmos-peer-check"
   | "explorer-sync"
   | "explorer-deep-health"
-  | "chain-freshness";
+  | "chain-freshness"
+  | "cometbft-mempool";
 
 export type Status = "UP" | "DOWN" | "DEGRADED" | "DEPLOYING";
 export type Category =
@@ -54,6 +55,8 @@ export type Endpoint = {
   peerIp?: string;
   publicRpc?: string;
   chainRpcUrl?: string; // For explorer-sync: EVM RPC to compare block height
+  mempoolDegradedAt?: number; // cometbft-mempool: trip DEGRADED when n_unconfirmed_txs ≥ this
+  mempoolDownAt?: number; // cometbft-mempool: trip DOWN when n_unconfirmed_txs ≥ this
   links: {
     endpoint: string;
     docs?: string;

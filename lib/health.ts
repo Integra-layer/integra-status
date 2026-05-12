@@ -923,6 +923,52 @@ function formatAge(sec: number): string {
 }
 
 // ---------------------------------------------------------------------------
+// CometBFT mempool depth — early warning for tx spam or stuck mempool.
+// A healthy testnet block produces ~5s with ~10-30 txs each, so the mempool
+// drains as fast as it fills. Sustained elevated depth signals either a
+// validator that can't include txs (stuck mempool, e.g. underpriced storm)
+// or a spammer flooding faster than the chain can consume.
+// ---------------------------------------------------------------------------
+
+async function checkCometbftMempool(ep: Endpoint): Promise<CheckResult> {
+  const start = Date.now();
+  const degradedAt = ep.mempoolDegradedAt ?? 300;
+  const downAt = ep.mempoolDownAt ?? 1000;
+
+  const res = await httpRequest(`${ep.url}/num_unconfirmed_txs`, {
+    timeout: ep.timeout,
+  });
+  if (res.statusCode !== 200)
+    throw new Error(`HTTP ${res.statusCode}`);
+
+  const data = JSON.parse(res.body);
+  const payload = data.result ?? data;
+  const nTxs = parseInt(payload.n_txs ?? "0", 10);
+  const totalBytes = parseInt(payload.total_bytes ?? "0", 10);
+  const details = { nTxs, totalBytes, degradedAt, downAt };
+
+  if (nTxs >= downAt) {
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      `Mempool overloaded — ${nTxs} pending txs (≥${downAt})`,
+    );
+  }
+  if (nTxs >= degradedAt) {
+    return buildResult(
+      ep,
+      "DEGRADED",
+      Date.now() - start,
+      details,
+      `Mempool elevated — ${nTxs} pending txs (≥${degradedAt})`,
+    );
+  }
+  return buildResult(ep, "UP", Date.now() - start, details);
+}
+
+// ---------------------------------------------------------------------------
 // Check dispatch
 // ---------------------------------------------------------------------------
 
@@ -943,6 +989,7 @@ const CHECK_FNS: Record<CheckType, CheckFn> = {
   "explorer-sync": checkExplorerSync,
   "explorer-deep-health": checkExplorerDeepHealth,
   "chain-freshness": checkChainFreshness,
+  "cometbft-mempool": checkCometbftMempool,
 };
 
 export async function runCheck(ep: Endpoint): Promise<CheckResult> {

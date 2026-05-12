@@ -297,10 +297,10 @@ export const APP_GROUPS: AppGroup[] = [
     description: "Block explorer for transactions, blocks, and validators (testnet)",
     endpoints: [
       "explorer-testnet",
-      "blockscout-testnet",
       "testnet-cosmos-rpc",
       "testnet-cosmos-rest",
       "testnet-chain-freshness",
+      "testnet-mempool",
       "explorer-testnet-backend",
     ],
   },
@@ -623,7 +623,7 @@ export const ENDPOINTS: Endpoint[] = [
 
   // -- Chain freshness (user-facing staleness alerts) -----------------------
   // Pages on Telegram when the latest block is >30 minutes old. Distinct from
-  // testnet-cosmos-rpc which trips at 60s — too noisy for paging.
+  // testnet-cosmos-rpc which trips at 120s — too noisy for paging.
   {
     id: "testnet-chain-freshness",
     name: "Testnet Chain Freshness",
@@ -695,6 +695,51 @@ export const ENDPOINTS: Endpoint[] = [
       },
     ],
     tags: ["CometBFT", "Freshness", "Hetzner"],
+  },
+
+  // -- Mempool depth (early warning for tx spam / stuck broadcasts) ----------
+  // Catches the failure mode where the chain still produces blocks (so
+  // chain-freshness stays UP) but the mempool fills with rejected/stuck txs —
+  // the exact pattern observed during the 2026-05-12 faucet-nonce incident.
+  {
+    id: "testnet-mempool",
+    name: "Testnet Mempool Depth",
+    category: "blockchain",
+    environment: "dev",
+    url: "https://testnet.integralayer.com/rpc",
+    checkType: "cometbft-mempool",
+    timeout: 10000,
+    mempoolDegradedAt: 300,
+    mempoolDownAt: 1000,
+    enabled: true,
+    dependsOn: ["testnet-cosmos-rpc"],
+    impacts: ["portal-testnet", "explorer-testnet"],
+    impactDescription:
+      "Sustained mempool elevation indicates broadcast rejection or spam; user tx submissions land slowly or fail",
+    description:
+      "Testnet CometBFT mempool depth — alerts when unconfirmed txs accumulate faster than blocks consume them",
+    richDescription:
+      "Polls /num_unconfirmed_txs on the testnet RPC every minute. A healthy testnet drains the mempool in <1 block (~5s) so steady-state depth is single-digit. DEGRADED at ≥300 pending txs, DOWN at ≥1000. Common triggers: a service stuck retrying the same nonce with insufficient gas bump (replacement-underpriced storm), an external spammer, or block-level inclusion failures (gas, ABCI rejection).",
+    owner: OWNERS.adam,
+    links: {
+      endpoint: "https://testnet.integralayer.com/rpc/num_unconfirmed_txs",
+      docs: "https://docs.cometbft.com/v0.38/rpc/#/Info/num_unconfirmed_txs",
+    },
+    commonIssues: [
+      {
+        cause: "Stuck mempool — a sender re-sends the same nonce with insufficient gas bump",
+        fix: "Identify the spam sender via raw mempool sampling; if it's an internal service (faucet, indexer), fix its nonce management. Last resort: `systemctl restart intgd` on the gateway to flush local mempool (peers re-gossip — also restart serially if needed).",
+      },
+      {
+        cause: "External spam attack on the public RPC",
+        fix: "Add a Caddy-level rate-limit on /evm POST and /rpc/broadcast_tx_*; consider blocking the sender address at the application layer.",
+      },
+      {
+        cause: "Block-level rejection — txs admit to mempool but proposer can't include them",
+        fix: "Check intgd logs for `failed to deliver` or ABCI errors; often a gas-cap or consensus-param mismatch after an upgrade.",
+      },
+    ],
+    tags: ["CometBFT", "Mempool", "Hetzner"],
   },
 
   // -- Validators (mainnet) --------------------------------------------------
