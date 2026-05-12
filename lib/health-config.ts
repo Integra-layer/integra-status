@@ -1356,7 +1356,7 @@ export const ENDPOINTS: Endpoint[] = [
     url: "https://testnet.blockscout.integralayer.com",
     checkType: "http-get",
     timeout: 10000,
-    enabled: true,
+    enabled: false, // Retired 2026-05-12 — blockscout containers stopped + images removed on Helsinki gateway to recover disk space. Caddy origin returns 502. Replaced by Ethernal explorer (explorer-testnet).
     dependsOn: ["testnet-evm-rpc"],
     impacts: [],
     description:
