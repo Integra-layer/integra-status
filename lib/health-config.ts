@@ -25,7 +25,7 @@ export const ENVIRONMENTS: Environment[] = [
   "staging",
   "release",
 ];
-export const CHAIN_HALT_THRESHOLD_SECONDS = 60;
+export const CHAIN_HALT_THRESHOLD_SECONDS = 120;
 
 // Owner constants — real team members with email contacts + Telegram handles
 export const OWNERS: Record<string, Owner> = {

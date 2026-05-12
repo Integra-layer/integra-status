@@ -854,7 +854,7 @@ async function checkExplorerDeepHealth(ep: Endpoint): Promise<CheckResult> {
 
 // ---------------------------------------------------------------------------
 // Chain-freshness check — user-facing staleness alert for explorer monitoring.
-// Distinct from cosmos-rpc which trips at 60s; this trips at 5min DEGRADED /
+// Distinct from cosmos-rpc which trips at 120s; this trips at 5min DEGRADED /
 // 30min DOWN so it pages on prolonged stalls without flapping on transient
 // validator hiccups. Hits the Cosmos RPC /status endpoint and reads
 // sync_info.latest_block_time.
