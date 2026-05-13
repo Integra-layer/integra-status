@@ -2248,6 +2248,36 @@ export const ENDPOINTS: Endpoint[] = [
     tags: ["Node.js", "BullMQ", "Docker"],
   },
 
+  // Meta-watchdog probe (D4 of integra-explorer GOAL_TESTNET_STABILITY.md):
+  // checks that the explorer's own Telegram alerter has delivered a message
+  // recently. Independent of the explorer's runtime — runs on Vultr crontab
+  // here, uses integra-status's own bot+token to alert if it goes red.
+  // This satisfies the "fire if alerting goes quiet for >15 min" rule
+  // without requiring a third-party SaaS account.
+  {
+    id: "explorer-testnet-alerter-liveness",
+    name: "Testnet Explorer Alerter Liveness",
+    category: "apis",
+    environment: "dev",
+    url: "https://testnet.explorer.integralayer.com/api/health/alerter",
+    checkType: "explorer-alerter-liveness",
+    timeout: 10000,
+    enabled: true,
+    dependsOn: ["explorer-testnet-backend"],
+    impacts: [],
+    description:
+      "Testnet explorer alerter — fires if Telegram delivery goes quiet >15 min (D4 meta-watchdog)",
+    richDescription:
+      "Polls /api/health/alerter on the testnet explorer and checks that its module-scoped Telegram delivery state shows a successful send within the last 15 minutes. If the alerter has been silent for longer, this probe trips DEGRADED (>15 min) or DOWN (>60 min), and integra-status sends its own Telegram alert — using a separate bot+token, on a separate host (Vultr) from the explorer (Hetzner). This is the meta-watchdog called out by GOAL_TESTNET_STABILITY.md §6.D4.",
+    owner: OWNERS.adam,
+    links: {
+      endpoint: "https://testnet.explorer.integralayer.com/api/health/alerter",
+      repo: "https://github.com/Integra-layer/integra-explorer",
+    },
+    commonIssues: explorerSyncIssues,
+    tags: ["Node.js", "Telegram", "Meta-watchdog"],
+  },
+
   // -- Explorer Deep Health (Callisto/Hasura integrity) ----------------------
   {
     id: "explorer-mainnet-deep-health",

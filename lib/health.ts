@@ -516,6 +516,150 @@ async function checkCosmosPeer(ep: Endpoint): Promise<CheckResult> {
   );
 }
 
+/**
+ * Meta-watchdog probe (D4 of integra-explorer's GOAL_TESTNET_STABILITY.md).
+ *
+ * Polls the explorer's `/api/health/alerter` endpoint and checks that
+ * Telegram delivery has succeeded recently. The explicit goal: "fire if
+ * the alerting system itself goes quiet for >15 minutes."
+ *
+ * Why this is a valid meta-watchdog:
+ * - Runs on a different host (Vultr) from the explorer (Hetzner).
+ * - Uses integra-status's own Telegram bot+token (separate auth domain).
+ * - Cron-scheduled on the Vultr crontab (not GH Actions, not BullMQ).
+ * - If the explorer's alerter has not delivered a Telegram message in
+ *   the last 15 minutes, this probe trips DEGRADED → DOWN, and
+ *   integra-status sends a Telegram alert via its OWN delivery path.
+ *
+ * Expected response shape (from explorer's run/api/healthSync.js):
+ *   {
+ *     "telegram": { "lastSuccessAt": "ISO", "consecutiveFailures": 0,
+ *                   "totalSent": N, "configured": true },
+ *     "opsgenieConfigured": false,
+ *     "healthy": true
+ *   }
+ *
+ * Thresholds:
+ *   - DEGRADED if lastSuccessAt > 15 min stale or consecutiveFailures >= 3
+ *   - DOWN if endpoint unreachable / 5xx / lastSuccessAt > 60 min stale
+ */
+async function checkExplorerAlerterLiveness(
+  ep: Endpoint,
+): Promise<CheckResult> {
+  const start = Date.now();
+  const details: Record<string, unknown> = {};
+  const STALE_DEGRADED_MS = 15 * 60 * 1000;
+  const STALE_DOWN_MS = 60 * 60 * 1000;
+
+  let res;
+  try {
+    res = await httpRequest(ep.url, { timeout: ep.timeout });
+  } catch (err: unknown) {
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      `Alerter endpoint unreachable: ${(err as Error).message}`,
+    );
+  }
+  details.statusCode = res.statusCode;
+
+  if (res.statusCode >= 500) {
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      `Alerter endpoint HTTP ${res.statusCode}`,
+    );
+  }
+
+  let body: { telegram?: Record<string, unknown>; healthy?: boolean };
+  try {
+    body = JSON.parse(res.body);
+  } catch {
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      "Alerter endpoint returned non-JSON",
+    );
+  }
+
+  const tg = body.telegram;
+  if (!tg) {
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      "Alerter response missing telegram block",
+    );
+  }
+  details.consecutiveFailures = tg.consecutiveFailures;
+  details.totalSent = tg.totalSent;
+  details.configured = tg.configured;
+
+  // Configured-but-never-delivered is unhealthy by design (alerter is
+  // expected to deliver the ALERTER ONLINE startup probe within seconds
+  // of every backend restart).
+  if (!tg.configured) {
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      "Telegram alerter is not configured (token/chat id missing)",
+    );
+  }
+  if (typeof tg.consecutiveFailures === "number" && tg.consecutiveFailures >= 3) {
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      `Telegram delivery has ${tg.consecutiveFailures} consecutive failures`,
+    );
+  }
+  if (!tg.lastSuccessAt) {
+    return buildResult(
+      ep,
+      "DEGRADED",
+      Date.now() - start,
+      details,
+      "No successful Telegram delivery yet (may be a fresh restart)",
+    );
+  }
+
+  const lastSuccessMs = Date.parse(tg.lastSuccessAt as string);
+  const ageMs = Date.now() - lastSuccessMs;
+  details.lastSuccessAt = tg.lastSuccessAt;
+  details.ageSeconds = Math.round(ageMs / 1000);
+
+  if (ageMs > STALE_DOWN_MS) {
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      `Alerter silent for ${Math.round(ageMs / 60000)} min (>${STALE_DOWN_MS / 60000} min DOWN threshold)`,
+    );
+  }
+  if (ageMs > STALE_DEGRADED_MS) {
+    return buildResult(
+      ep,
+      "DEGRADED",
+      Date.now() - start,
+      details,
+      `Alerter silent for ${Math.round(ageMs / 60000)} min (>${STALE_DEGRADED_MS / 60000} min DEGRADED threshold)`,
+    );
+  }
+
+  return buildResult(ep, "UP", Date.now() - start, details);
+}
+
 async function checkExplorerSync(ep: Endpoint): Promise<CheckResult> {
   const start = Date.now();
   const details: Record<string, unknown> = {};
@@ -1031,6 +1175,7 @@ const CHECK_FNS: Record<CheckType, CheckFn> = {
   graphql: checkGraphql,
   "cosmos-peer-check": checkCosmosPeer,
   "explorer-sync": checkExplorerSync,
+  "explorer-alerter-liveness": checkExplorerAlerterLiveness,
   "explorer-deep-health": checkExplorerDeepHealth,
   "chain-freshness": checkChainFreshness,
   "cometbft-mempool": checkCometbftMempool,
