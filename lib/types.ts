@@ -13,6 +13,7 @@ export type CheckType =
   | "graphql"
   | "cosmos-peer-check"
   | "explorer-sync"
+  | "explorer-alerter-liveness"
   | "explorer-deep-health"
   | "chain-freshness"
   | "cometbft-mempool";
