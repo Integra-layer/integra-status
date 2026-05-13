@@ -520,7 +520,7 @@ async function checkCosmosPeer(ep: Endpoint): Promise<CheckResult> {
  * Meta-watchdog probe (D4 of integra-explorer's GOAL_TESTNET_STABILITY.md).
  *
  * Polls the explorer's `/api/health/alerter` endpoint and checks that
- * Telegram delivery has succeeded recently. The explicit goal: "fire if
+ * Telegram delivery has succeeded recently. The original goal: "fire if
  * the alerting system itself goes quiet for >15 minutes."
  *
  * Why this is a valid meta-watchdog:
@@ -528,7 +528,7 @@ async function checkCosmosPeer(ep: Endpoint): Promise<CheckResult> {
  * - Uses integra-status's own Telegram bot+token (separate auth domain).
  * - Cron-scheduled on the Vultr crontab (not GH Actions, not BullMQ).
  * - If the explorer's alerter has not delivered a Telegram message in
- *   the last 15 minutes, this probe trips DEGRADED → DOWN, and
+ *   the configured stale window, this probe trips DEGRADED → DOWN, and
  *   integra-status sends a Telegram alert via its OWN delivery path.
  *
  * Expected response shape (from explorer's run/api/healthSync.js):
@@ -539,17 +539,26 @@ async function checkCosmosPeer(ep: Endpoint): Promise<CheckResult> {
  *     "healthy": true
  *   }
  *
- * Thresholds:
- *   - DEGRADED if lastSuccessAt > 15 min stale or consecutiveFailures >= 3
- *   - DOWN if endpoint unreachable / 5xx / lastSuccessAt > 60 min stale
+ * Thresholds (relaxed from 15min/60min on 2026-05-13 — see commit message):
+ *   - DEGRADED if lastSuccessAt > 30 min stale or consecutiveFailures >= 3
+ *   - DOWN if endpoint unreachable / 5xx / lastSuccessAt > 120 min stale
+ *
+ * Why relaxed: the alerter is structurally silent during periods when no
+ * real incident occurs (the startup probe fires once at boot, real alerts
+ * fire only on actual incidents). The 15-min DEGRADED threshold therefore
+ * fired on every healthy quiet period, generating a ~22-min DEGRADED →
+ * RECOVERED cycle that buried real alerts under self-noise. Restoring to
+ * tighter values (15min/60min) becomes safe once the explorer adds a
+ * periodic Telegram heartbeat (planned in companion PR — see
+ * integra-explorer: `feat/telegram-heartbeat-getme`).
  */
 async function checkExplorerAlerterLiveness(
   ep: Endpoint,
 ): Promise<CheckResult> {
   const start = Date.now();
   const details: Record<string, unknown> = {};
-  const STALE_DEGRADED_MS = 15 * 60 * 1000;
-  const STALE_DOWN_MS = 60 * 60 * 1000;
+  const STALE_DEGRADED_MS = 30 * 60 * 1000;
+  const STALE_DOWN_MS = 120 * 60 * 1000;
 
   let res;
   try {

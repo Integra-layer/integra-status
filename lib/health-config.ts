@@ -2252,8 +2252,15 @@ export const ENDPOINTS: Endpoint[] = [
   // checks that the explorer's own Telegram alerter has delivered a message
   // recently. Independent of the explorer's runtime — runs on Vultr crontab
   // here, uses integra-status's own bot+token to alert if it goes red.
-  // This satisfies the "fire if alerting goes quiet for >15 min" rule
+  // This satisfies the "fire if alerting goes quiet for too long" rule
   // without requiring a third-party SaaS account.
+  //
+  // Thresholds relaxed 2026-05-13 from 15min/60min to 30min/120min after
+  // observing self-noise: alerter is structurally silent during healthy
+  // periods (real alerts only fire on real incidents), so 15min DEGRADED
+  // fired every ~22min during quiet operation. Tighter values restored
+  // once the explorer ships a periodic Telegram heartbeat (companion
+  // explorer PR: feat/telegram-heartbeat-getme).
   {
     id: "explorer-testnet-alerter-liveness",
     name: "Testnet Explorer Alerter Liveness",
@@ -2266,9 +2273,9 @@ export const ENDPOINTS: Endpoint[] = [
     dependsOn: ["explorer-testnet-backend"],
     impacts: [],
     description:
-      "Testnet explorer alerter — fires if Telegram delivery goes quiet >15 min (D4 meta-watchdog)",
+      "Testnet explorer alerter — fires if Telegram delivery goes quiet >30 min (D4 meta-watchdog)",
     richDescription:
-      "Polls /api/health/alerter on the testnet explorer and checks that its module-scoped Telegram delivery state shows a successful send within the last 15 minutes. If the alerter has been silent for longer, this probe trips DEGRADED (>15 min) or DOWN (>60 min), and integra-status sends its own Telegram alert — using a separate bot+token, on a separate host (Vultr) from the explorer (Hetzner). This is the meta-watchdog called out by GOAL_TESTNET_STABILITY.md §6.D4.",
+      "Polls /api/health/alerter on the testnet explorer and checks that its module-scoped Telegram delivery state shows a successful send within the last 30 minutes. If the alerter has been silent for longer, this probe trips DEGRADED (>30 min) or DOWN (>120 min), and integra-status sends its own Telegram alert — using a separate bot+token, on a separate host (Vultr) from the explorer (Hetzner). This is the meta-watchdog called out by GOAL_TESTNET_STABILITY.md §6.D4. The thresholds were relaxed from 15min/60min on 2026-05-13 to eliminate self-noise during healthy quiet periods; they will be tightened back once the explorer ships a periodic Telegram heartbeat that updates lastSuccessAt every ~5 min regardless of whether real alerts are being sent.",
     owner: OWNERS.adam,
     links: {
       endpoint: "https://testnet.explorer.integralayer.com/api/health/alerter",
