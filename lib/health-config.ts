@@ -2174,11 +2174,17 @@ export const ENDPOINTS: Endpoint[] = [
     name: "Testnet Explorer Sync",
     category: "blockchain",
     environment: "dev",
-    url: "https://testnet.explorer.integralayer.com/api/status",
+    // INT-599: explorer now exposes a public unauthenticated aggregate
+    // endpoint with `lastIndexedBlock` + `lagSeconds` per shouldSync
+    // explorer. Closes hypothesis E1.b LIVE — until this landed the
+    // explorer's exact failure mode (wedged indexer, chain still
+    // producing) bypassed every out-of-band alert and the 2026-05 5-day
+    // stall pattern would have repeated.
+    url: "https://testnet.explorer.integralayer.com/api/health/sync-status",
     checkType: "explorer-sync",
     chainRpcUrl: "https://testnet.integralayer.com/evm",
     timeout: 15000,
-    enabled: false, // Ethernal API is auth-gated — no public block height endpoint. Helsinki gateway hosts explorer.
+    enabled: true,
     dependsOn: ["testnet-evm-rpc", "explorer-testnet"],
     impacts: ["explorer-testnet"],
     impactDescription:
