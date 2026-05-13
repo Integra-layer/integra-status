@@ -541,6 +541,21 @@ async function checkExplorerSync(ep: Endpoint): Promise<CheckResult> {
         const data = JSON.parse(statusRes.body);
         if (isGraphql && data.data?.block?.[0]?.height) {
           explorerBlock = Number(data.data.block[0].height);
+        } else if (Array.isArray(data.explorers)) {
+          // INT-599 aggregate shape from /api/health/sync-status. The
+          // endpoint returns one row per `shouldSync:true` explorer; we
+          // take the first because integra-status configures a single
+          // probe per environment. `lagSeconds` here is age-of-last-write,
+          // not blocks-behind-tip — capture it directly so we can fall
+          // back to it if no chain RPC is configured.
+          const row = data.explorers[0];
+          if (row) {
+            if (row.lastIndexedBlock != null)
+              explorerBlock = Number(row.lastIndexedBlock);
+            if (typeof row.lagSeconds === "number")
+              details.lagSecondsFromExplorer = row.lagSeconds;
+            if (row.lastIndexedAt) details.lastIndexedAt = row.lastIndexedAt;
+          }
         } else {
           explorerBlock =
             data.lastSyncedBlock ??
@@ -621,6 +636,35 @@ async function checkExplorerSync(ep: Endpoint): Promise<CheckResult> {
       Date.now() - start,
       details,
       `Explorer ${lag} blocks behind chain (${Math.round((lag * 2) / 60)} min lag)`,
+    );
+  }
+
+  // INT-599 fallback: when chain RPC didn't give us a tip but the
+  // explorer surfaced `lagSeconds` (age of latest block write), classify
+  // on freshness alone. The Integra block time is ~2s, so a healthy
+  // indexer should never be more than ~3 min behind real time. Match
+  // the band the chain-stall watchdog uses (~10 min hard fail).
+  const lagFromExplorer = details.lagSecondsFromExplorer;
+  if (typeof lagFromExplorer === "number") {
+    details.lagSeconds = lagFromExplorer;
+    if (lagFromExplorer < 180) {
+      return buildResult(ep, "UP", Date.now() - start, details);
+    }
+    if (lagFromExplorer < 600) {
+      return buildResult(
+        ep,
+        "DEGRADED",
+        Date.now() - start,
+        details,
+        `Explorer ${Math.round(lagFromExplorer)}s since last indexed block`,
+      );
+    }
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      `Explorer ${Math.round(lagFromExplorer / 60)} min since last indexed block (likely wedged)`,
     );
   }
 
