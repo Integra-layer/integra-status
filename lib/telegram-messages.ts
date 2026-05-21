@@ -141,6 +141,116 @@ export function formatRecovery(
 }
 
 // ---------------------------------------------------------------------------
+// Flapping-incident alerts — collapse a slow-flapping endpoint (the City
+// of Integra API on 2026-05-21) into ONE incident instead of paging on
+// every DOWN/UP transition. See lib/incident-tracker.ts.
+// ---------------------------------------------------------------------------
+
+export function formatFlapStart(result: CheckResult, flapCount: number): string {
+  const lines = [
+    `🔁 <b>FLAPPING: ${escapeHtml(result.name)}</b>`,
+    ``,
+    `⏰ ${nowUtc()}`,
+    `📂 ${escapeHtml(result.category)} · ${escapeHtml(result.environment)}`,
+    `📊 ${flapCount} status changes in the last hour — the service is unstable.`,
+    ``,
+    `🔕 Per-change alerts are now collapsed into this incident. Next update within 60m, or once it stabilises.`,
+  ];
+
+  if (result.impactDescription) {
+    lines.push(``, `⚠️ <b>Impact:</b> ${escapeHtml(result.impactDescription)}`);
+  }
+
+  const mentions = ownerMention(result);
+  if (mentions.length > 0) {
+    lines.push(``, ...mentions);
+  }
+
+  lines.push(RULE, ...quickLinkFooter(result));
+  return lines.join("\n");
+}
+
+export function formatFlapDigest(
+  result: CheckResult,
+  flapCount: number,
+  openForSeconds: number,
+): string {
+  const lines = [
+    `🔁 <b>STILL FLAPPING: ${escapeHtml(result.name)}</b>`,
+    ``,
+    `⏰ ${nowUtc()}`,
+    `📊 ${flapCount} status changes · unstable for ${formatDuration(openForSeconds)}`,
+    `📍 Currently: ${statusEmoji(result.status)} <b>${escapeHtml(result.status)}</b>`,
+  ];
+
+  if (result.impactDescription) {
+    lines.push(``, `⚠️ <b>Impact:</b> ${escapeHtml(result.impactDescription)}`);
+  }
+
+  const mentions = ownerMention(result);
+  if (mentions.length > 0) {
+    lines.push(``, ...mentions);
+  }
+
+  lines.push(RULE, ...quickLinkFooter(result));
+  return lines.join("\n");
+}
+
+export function formatIncidentResolved(
+  result: CheckResult,
+  stableForSeconds: number,
+): string {
+  const stable = formatDuration(stableForSeconds);
+
+  if (result.status === "UP") {
+    const lines = [
+      `✅ <b>STABILISED: ${escapeHtml(result.name)}</b>`,
+      ``,
+      `⏰ ${nowUtc()}`,
+      `⏳ UP and stable for ${stable} — the flapping incident is resolved.`,
+      `⚡ Response: ${result.responseTimeMs}ms`,
+    ];
+    const mentions = ownerMention(result);
+    if (mentions.length > 0) {
+      lines.push(``, ...mentions);
+    }
+    lines.push(``, RULE, `All systems operational ✓`, ...quickLinkFooter(result));
+    return lines.join("\n");
+  }
+
+  // Flapping stopped, but the endpoint settled into a steady non-UP
+  // state — page it once, properly, with causes + impact.
+  const lines = [
+    `${statusEmoji(result.status)} <b>SETTLED ${statusLabel(result.status)}: ${escapeHtml(result.name)}</b>`,
+    ``,
+    `⏰ ${nowUtc()}`,
+    `⏳ Flapping stopped — steadily ${escapeHtml(result.status)} for ${stable}.`,
+    result.error
+      ? `⚠️ ${escapeHtml(result.error)}`
+      : `⚡ ${result.responseTimeMs}ms`,
+  ];
+
+  if (result.commonIssues.length > 0) {
+    lines.push(``, RULE, `💡 <b>Possible causes:</b>`);
+    for (const issue of result.commonIssues.slice(0, 3)) {
+      lines.push(`  • ${escapeHtml(issue.cause)}`);
+    }
+  }
+
+  if (result.impactDescription) {
+    lines.push(``, `⚠️ <b>Impact:</b> ${escapeHtml(result.impactDescription)}`);
+  }
+
+  const mentions = ownerMention(result);
+  if (mentions.length > 0) {
+    lines.push(``, ...mentions);
+  }
+
+  lines.push(RULE, ...quickLinkFooter(result));
+  return lines.join("\n");
+}
+
+// ---------------------------------------------------------------------------
 // Grouped alert (multiple transitions in same cron tick)
 // ---------------------------------------------------------------------------
 
