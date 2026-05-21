@@ -17,6 +17,9 @@ import {
   formatCategoryDetail,
   formatHelp,
   asciiSparkline,
+  formatFlapStart,
+  formatFlapDigest,
+  formatIncidentResolved,
 } from "../telegram-messages";
 import type { CheckResult, HealthSummary, Owner } from "../types";
 
@@ -492,5 +495,63 @@ describe("asciiSparkline", () => {
 
   it("treats zero/negative values as missing data", () => {
     expect(asciiSparkline([0, 0, 0], 3)).toBe("▁▁▁");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Flapping-incident formatters
+// ---------------------------------------------------------------------------
+
+describe("formatFlapStart", () => {
+  it("renders the flap count + impact and HTML-escapes the name", () => {
+    const out = formatFlapStart(
+      makeResult({ name: "City <API>", impactDescription: "Game down" }),
+      6,
+    );
+    expect(out).toContain("FLAPPING: City &lt;API&gt;");
+    expect(out).toContain("6 status changes");
+    expect(out).toContain("Game down");
+    expect(out).toContain("🔁");
+  });
+});
+
+describe("formatFlapDigest", () => {
+  it("shows the open duration and current status", () => {
+    const out = formatFlapDigest(
+      makeResult({ name: "City API", status: "DOWN" }),
+      9,
+      2 * 3600 + 5 * 60,
+    );
+    expect(out).toContain("STILL FLAPPING");
+    expect(out).toContain("9 status changes");
+    expect(out).toContain("2h 5m");
+    expect(out).toContain("DOWN");
+  });
+});
+
+describe("formatIncidentResolved", () => {
+  it("reports a clean UP recovery", () => {
+    const out = formatIncidentResolved(
+      makeResult({ name: "City API", status: "UP" }),
+      30 * 60,
+    );
+    expect(out).toContain("STABILISED: City API");
+    expect(out).toContain("30m");
+    expect(out).toContain("All systems operational");
+  });
+
+  it("pages with error + causes when the endpoint settles non-UP", () => {
+    const out = formatIncidentResolved(
+      makeResult({
+        name: "City API",
+        status: "DOWN",
+        error: "HTTP 503",
+        commonIssues: [{ cause: "App Runner overload", fix: "scale up" }],
+      }),
+      45 * 60,
+    );
+    expect(out).toContain("SETTLED DOWN");
+    expect(out).toContain("HTTP 503");
+    expect(out).toContain("App Runner overload");
   });
 });
