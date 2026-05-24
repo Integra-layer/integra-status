@@ -327,6 +327,8 @@ export const APP_GROUPS: AppGroup[] = [
       "testnet-evm-rpc",
       "testnet-cosmos-rpc",
       "testnet-cosmos-rest",
+      "testnet-signer1-evm-rpc",
+      "testnet-signer2-evm-rpc",
     ],
   },
   {
@@ -334,7 +336,12 @@ export const APP_GROUPS: AppGroup[] = [
     name: "Validators",
     icon: "\u26A1",
     description: "Active testnet validators (mainnet retired)",
-    endpoints: ["validator-signer1", "validator-signer2"],
+    endpoints: [
+      "validator-signer1",
+      "validator-signer2",
+      "testnet-signer1-freshness",
+      "testnet-signer2-freshness",
+    ],
   },
   {
     id: "sites",
@@ -621,6 +628,64 @@ export const ENDPOINTS: Endpoint[] = [
     tags: ["Cosmos SDK", "Caddy", "Hetzner"],
   },
 
+  // -- Per-signer EVM RPC probes (INT-636) ----------------------------------
+  // After the RPC offload, testnet.integralayer.com/evm is served by a Caddy
+  // least_conn pool over signer-1:8645 and signer-2:8645. The aggregate probe
+  // (testnet-evm-rpc) tests the LB surface; these per-signer probes tell the
+  // on-call which upstream is failing when the public endpoint degrades.
+  //
+  // REACHABILITY NOTE (2026-05-24):
+  //   signer-1 (45.77.139.208) = this status-page host → probe via loopback.
+  //   signer-2 (159.223.206.94) ufw blocks all sources except 91.99.208.48.
+  //   Ship enabled:false; flip to true once ufw on signer-2 allows 45.77.139.208
+  //   OR after a Caddy TLS front is added to the per-signer DNS names.
+  {
+    id: "testnet-signer1-evm-rpc",
+    name: "Testnet EVM RPC — signer-1",
+    category: "blockchain",
+    environment: "dev",
+    url: "http://127.0.0.1:8645",
+    checkType: "evm-rpc",
+    timeout: 10000,
+    enabled: false, // Flip true after Phase 4 cutover smoke passes (INT-636)
+    expectedChainId: "0x666a",
+    dependsOn: [],
+    impacts: ["testnet-evm-rpc"],
+    impactDescription:
+      "One half of the public EVM RPC LB pool is down; Caddy will fail over but capacity is halved",
+    description:
+      "EVM JSON-RPC on signer-1 (Vultr 45.77.139.208) — direct loopback probe of the upstream behind testnet.integralayer.com/evm",
+    richDescription:
+      "After the RPC offload (INT-636), the public testnet.integralayer.com/evm endpoint is served by a Caddy least_conn pool over signer-1:8645 and signer-2:8645. This probe targets signer-1 via loopback (status page runs on the same host) so we can tell which upstream is failing when the public endpoint degrades.",
+    owner: OWNERS.adam,
+    links: { endpoint: "http://127.0.0.1:8645" },
+    commonIssues: evmRpcCaddyIssues,
+    tags: ["EVM", "Caddy", "Vultr", "Signer"],
+  },
+  {
+    id: "testnet-signer2-evm-rpc",
+    name: "Testnet EVM RPC — signer-2",
+    category: "blockchain",
+    environment: "dev",
+    url: "http://159.223.206.94:8645",
+    checkType: "evm-rpc",
+    timeout: 10000,
+    enabled: false, // Flip true after ufw on signer-2 allows 45.77.139.208 (INT-636)
+    expectedChainId: "0x666a",
+    dependsOn: [],
+    impacts: ["testnet-evm-rpc"],
+    impactDescription:
+      "One half of the public EVM RPC LB pool is down; Caddy will fail over but capacity is halved",
+    description:
+      "EVM JSON-RPC on signer-2 (DigitalOcean 159.223.206.94) — direct probe of the upstream behind testnet.integralayer.com/evm",
+    richDescription:
+      "Companion probe to testnet-signer1-evm-rpc. Targets the second upstream in the Caddy least_conn pool. Requires ufw on signer-2 to allow 45.77.139.208 (this host) before enabling.",
+    owner: OWNERS.adam,
+    links: { endpoint: "http://159.223.206.94:8645" },
+    commonIssues: evmRpcCaddyIssues,
+    tags: ["EVM", "Caddy", "DigitalOcean", "Signer"],
+  },
+
   // -- Chain freshness (user-facing staleness alerts) -----------------------
   // Pages on Telegram when the latest block is >30 minutes old. Distinct from
   // testnet-cosmos-rpc which trips at 120s — too noisy for paging.
@@ -852,6 +917,60 @@ export const ENDPOINTS: Endpoint[] = [
     ],
     tags: ["CometBFT", "DigitalOcean"],
   },
+
+  // -- Per-signer freshness probes (INT-636) ---------------------------------
+  // Distinct from testnet-chain-freshness (which probes the LB and cannot tell
+  // which signer fell behind). These fire DEGRADED at 5 min, DOWN at 30 min.
+  //
+  // REACHABILITY NOTE (2026-05-24):
+  //   signer-1 CometBFT RPC: loopback http://127.0.0.1:8757 reachable (same host).
+  //   signer-2 CometBFT RPC: http://159.223.206.94:8757 blocked by ufw on signer-2
+  //   (only 91.99.208.48 allowed). Ship enabled:false; flip after ufw widened.
+  {
+    id: "testnet-signer1-freshness",
+    name: "Testnet Signer-1 Freshness",
+    category: "validators",
+    environment: "dev",
+    url: "http://127.0.0.1:8757",
+    checkType: "chain-freshness",
+    timeout: 20000,
+    enabled: false, // Flip true after Phase 4 cutover smoke passes (INT-636)
+    dependsOn: [],
+    impacts: ["testnet-evm-rpc", "testnet-cosmos-rpc"],
+    impactDescription:
+      "Signer-1 has stopped advancing — Caddy LB will serve stale state from this upstream",
+    description:
+      "Signer-1 block age — fires DEGRADED at 5min, DOWN at 30min if signer-1 stops catching up",
+    richDescription:
+      "Per-signer freshness probe via CometBFT /status on signer-1 loopback. Distinct from testnet-chain-freshness (which probes the LB and so cannot distinguish which signer fell behind). Helps the on-call know which signer to restart.",
+    owner: OWNERS.adam,
+    links: { endpoint: "http://127.0.0.1:8757/status" },
+    commonIssues: cosmosRpcIssues,
+    tags: ["CometBFT", "Vultr", "Signer"],
+  },
+  {
+    id: "testnet-signer2-freshness",
+    name: "Testnet Signer-2 Freshness",
+    category: "validators",
+    environment: "dev",
+    url: "http://159.223.206.94:8757",
+    checkType: "chain-freshness",
+    timeout: 20000,
+    enabled: false, // Flip true after ufw on signer-2 allows 45.77.139.208 (INT-636)
+    dependsOn: [],
+    impacts: ["testnet-evm-rpc", "testnet-cosmos-rpc"],
+    impactDescription:
+      "Signer-2 has stopped advancing — Caddy LB will serve stale state from this upstream",
+    description:
+      "Signer-2 block age — fires DEGRADED at 5min, DOWN at 30min if signer-2 stops catching up",
+    richDescription:
+      "Per-signer freshness probe; mirrors testnet-signer1-freshness for the DigitalOcean node. Requires ufw on signer-2 to allow 45.77.139.208 (this host) before enabling.",
+    owner: OWNERS.adam,
+    links: { endpoint: "http://159.223.206.94:8757/status" },
+    commonIssues: cosmosRpcIssues,
+    tags: ["CometBFT", "DigitalOcean", "Signer"],
+  },
+
   {
     id: "validator-archive",
     name: "Integra-Archive (AWS) [RETIRED]",
