@@ -821,6 +821,25 @@ async function checkExplorerSync(ep: Endpoint): Promise<CheckResult> {
     );
   }
 
+  // INT-638: empty explorers array means shouldSync=false on every row —
+  // the indexer auto-disabled itself after 3 consecutive RPC failures.
+  // This is user-impacting (zero data flowing), so report DOWN with an
+  // actionable recovery command rather than the generic "could not determine"
+  // message that obscures the root cause.
+  if (
+    details.explorerStatus != null &&
+    details.explorerBlock === null &&
+    details.lagSecondsFromExplorer === undefined
+  ) {
+    return buildResult(
+      ep,
+      "DOWN",
+      Date.now() - start,
+      details,
+      "Explorer auto-disabled (shouldSync=false) — likely RPC failures. Recover with: UPDATE explorers SET \"shouldSync\"=true, \"syncFailedAttempts\"=0, \"syncDisabledAt\"=NULL WHERE id=1",
+    );
+  }
+
   // If we couldn't get explorer block but it responded, it's degraded
   if (explorerBlock === null) {
     return buildResult(
