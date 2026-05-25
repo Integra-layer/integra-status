@@ -64,10 +64,9 @@ const explorerSyncEp = {
   enabled: true,
   dependsOn: [],
   impacts: [],
-  impactDescription: null,
   description: "Testnet explorer sync freshness",
-  richDescription: null,
-  owner: null,
+  richDescription: "",
+  owner: { name: "Adam", role: "CTO", contact: "", telegram: "" },
   links: { endpoint: "https://testnet.explorer.integralayer.com" },
   commonIssues: [],
   tags: [],
@@ -89,16 +88,13 @@ function stubHttpsRequests(
   return vi
     .spyOn(https, "request")
     .mockImplementation(
-      (
-        _opts: unknown,
-        cb?: (res: unknown) => void,
-      ) => {
+      ((_opts: unknown, cb?: (res: unknown) => void) => {
         const stub = responses[callIndex] ?? { statusCode: 200, body: "{}" };
         callIndex++;
         const { req, res } = makeFakeRequest(stub.statusCode, stub.body);
         if (cb) cb(res);
         return req as unknown as ReturnType<typeof https.request>;
-      },
+      }) as typeof https.request,
     );
 }
 
