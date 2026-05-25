@@ -61,12 +61,21 @@ describe("ENDPOINTS — identity", () => {
 
   it("uses https:// for all enabled endpoint URLs (or wss://, or explicit http: validators)", () => {
     // Validators expose CometBFT RPC over plain http on private IPs — that's OK.
+    // Per-signer EVM/freshness probes (INT-636) also use http directly against
+    // validator hosts — they bypass the TLS-terminating Caddy LB by design so
+    // we can tell which upstream is failing when the public endpoint degrades.
+    // Adding TLS would require Caddy on each signer + per-signer DNS, which is
+    // tracked as INT-636 followup. Security relies on ufw IP allowlists.
     // Everything else must be TLS.
     const httpAllowed = new Set([
       "validator-gateway",
       "validator-signer1",
       "validator-signer2",
       "validator-archive",
+      "testnet-signer1-evm-rpc",
+      "testnet-signer2-evm-rpc",
+      "testnet-signer1-freshness",
+      "testnet-signer2-freshness",
     ]);
     for (const ep of ENDPOINTS) {
       if (!ep.enabled) continue;
