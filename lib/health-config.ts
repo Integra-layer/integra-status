@@ -227,6 +227,10 @@ const externalServiceIssues: CommonIssue[] = [
 
 const explorerSyncIssues: CommonIssue[] = [
   {
+    cause: "Explorer auto-disabled after 3 consecutive RPC failures (shouldSync=false) — sync-status API returns empty explorers array",
+    fix: "Re-enable in DB: UPDATE explorers SET \"shouldSync\"=true, \"syncFailedAttempts\"=0, \"syncDisabledAt\"=NULL WHERE id=1; then check worker logs for 'auto-disabled due to RPC failures' to confirm root cause",
+  },
+  {
     cause: "BullMQ blockSync job stuck in active state",
     fix: "SSH to server, clear queue: docker exec <backend> node -e \"...Queue('blockSync')...obliterate()...\"; restart workers",
   },
@@ -2311,7 +2315,7 @@ export const ENDPOINTS: Endpoint[] = [
     description:
       "Testnet explorer sync freshness — compares indexed block height with chain head",
     richDescription:
-      "Monitors the testnet block explorer's indexer sync status by comparing its latest indexed block height against the Ormos testnet chain head. Same check logic as mainnet — detects stuck sync jobs and worker failures. Critical for the dev team to notice when testnet explorer data goes stale during active development and QA testing.",
+      "Monitors the testnet block explorer's indexer sync status by comparing its latest indexed block height against the Ormos testnet chain head. Same check logic as mainnet — detects stuck sync jobs and worker failures. Critical for the dev team to notice when testnet explorer data goes stale during active development and QA testing. The most common cause of a DOWN result is the explorer auto-disabling itself (shouldSync=false) after 3 consecutive RPC failures — the sync-status API returns an empty explorers array in this state. Recovery: UPDATE explorers SET \"shouldSync\"=true, \"syncFailedAttempts\"=0, \"syncDisabledAt\"=NULL WHERE id=1.",
     owner: OWNERS.adam,
     links: {
       endpoint: "https://testnet.explorer.integralayer.com",
