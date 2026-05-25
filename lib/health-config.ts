@@ -670,7 +670,7 @@ export const ENDPOINTS: Endpoint[] = [
     url: "http://159.223.206.94:8645",
     checkType: "evm-rpc",
     timeout: 10000,
-    enabled: false, // Flip true after ufw on signer-2 allows 45.77.139.208 (INT-636)
+    enabled: true, // 2026-05-25: signer-2 ufw widened to allow 45.77.139.208 → probe verified working (eth_blockNumber returns chain head)
     expectedChainId: "0x666a",
     dependsOn: [],
     impacts: ["testnet-evm-rpc"],
@@ -956,7 +956,7 @@ export const ENDPOINTS: Endpoint[] = [
     url: "http://159.223.206.94:8757",
     checkType: "chain-freshness",
     timeout: 20000,
-    enabled: false, // Flip true after ufw on signer-2 allows 45.77.139.208 (INT-636)
+    enabled: true, // 2026-05-25: signer-2 ufw widened to allow 45.77.139.208 → CometBFT /status probe verified working
     dependsOn: [],
     impacts: ["testnet-evm-rpc", "testnet-cosmos-rpc"],
     impactDescription:
