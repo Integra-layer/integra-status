@@ -822,7 +822,8 @@ async function checkExplorerSync(ep: Endpoint): Promise<CheckResult> {
   }
 
   // INT-638: empty explorers array means shouldSync=false on every row —
-  // the indexer auto-disabled itself after 3 consecutive RPC failures.
+  // the indexer auto-disabled itself after 10+ consecutive RPC failures
+  // (MAX_SYNC_FAILED_ATTEMPTS default raised from 3→10 by INT-638).
   // This is user-impacting (zero data flowing), so report DOWN with an
   // actionable recovery command rather than the generic "could not determine"
   // message that obscures the root cause.
