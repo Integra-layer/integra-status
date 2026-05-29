@@ -938,7 +938,7 @@ export const ENDPOINTS: Endpoint[] = [
     url: "http://127.0.0.1:8757",
     checkType: "chain-freshness",
     timeout: 20000,
-    enabled: false, // Flip true after Phase 4 cutover smoke passes (INT-636)
+    enabled: true, // Flip true after Phase 4 cutover smoke passes (INT-636)
     dependsOn: [],
     impacts: ["testnet-evm-rpc", "testnet-cosmos-rpc"],
     impactDescription:
