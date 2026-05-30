@@ -1,5 +1,7 @@
 # Integra Status Page
 
+> **Agents / AI tools**: see [`AGENTS.md`](./AGENTS.md) for build commands, test commands, architecture, and the DO-NOT list. CLAUDE.md (this file) is authoritative for deploy credentials and host details; AGENTS.md is authoritative for code-level operations.
+
 Real-time infrastructure status page for Integra Layer — blockchain, validators, APIs, and services.
 
 **Repo**: `Integra-layer/integra-status` (GitHub)
